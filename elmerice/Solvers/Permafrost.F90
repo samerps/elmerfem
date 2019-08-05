@@ -1449,7 +1449,7 @@ CONTAINS
           ! read element-wise material parameter (CurrentRockMaterial will have one entry each element)
           NumberOfRockRecords = &
                ReadPermafrostElementRockMaterial(CurrentRockMaterial,ElementRockMaterialName,Solver,DIM)
-          PRINT *, "NumberOfRockRecords", NumberOfRockRecords
+          !PRINT *, "NumberOfRockRecords", NumberOfRockRecords
         ELSE
           NumberOfRockRecords =  ReadPermafrostRockMaterial( Material,Model % Constants,CurrentRockMaterial )
         END IF
