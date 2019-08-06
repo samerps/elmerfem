@@ -64,8 +64,9 @@ SUBROUTINE PermafrostGroundwaterFlow_Init( Model,Solver,dt,TransientSimulation )
     CALL WARN( SolverName, 'Variable not found. Adding default "GWPressure"')
   END IF
   
-  OffsetDensity = GetLogical(Model % Constants,'Permafrost Offset Density', Found)
-  IF (.NOT.Found) OffsetDensity = .FALSE.
+  !OffsetDensity = &
+  !     GetLogical(Model % Constants,'Permafrost Offset Density', Found)
+  !IF (.NOT.Found) OffsetDensity = .FALSE.
   !IF (OffsetDensity) THEN
   !  ReferenceVar => VariableGet( Solver % Mesh % Variables, 'Reference Offset Density' )
   !  IF (.NOT.ASSOCIATED( ReferenceVar )) THEN
@@ -74,6 +75,7 @@ SUBROUTINE PermafrostGroundwaterFlow_Init( Model,Solver,dt,TransientSimulation )
   !    CALL INFO(SolverName,'Added "Reference Offset Density" to list of variables',Level=1)
   !  END IF
   !END IF
+    CALL Info( SolverName, '  Done Initialization',Level=1)
 END SUBROUTINE PermafrostGroundwaterFlow_Init
 !------------------------------------------------------------------------------
 SUBROUTINE PermafrostGroundwaterFlow( Model,Solver,dt,TransientSimulation )
@@ -4138,6 +4140,10 @@ SUBROUTINE PorosityInit(Model, Solver, Timestep, TransientSimulation )
     !PRINT *,CurrentNode, i
     PorosityValues(CurrentNode) = CurrentRockMaterial % eta0(RockMaterialID)
   END DO
+  CALL Info(SolverName, '-----------------------------------', Level=1)
+  CALL Info(SolverName, 'Initializing porosity to reference ', Level=1)
+  CALL Info(SolverName, 'done                               ', Level=1)
+  CALL Info(SolverName, '-----------------------------------', Level=1)
 END SUBROUTINE PorosityInit
 !==============================================================================
 !>  Evolution of Porosity 
@@ -4418,12 +4424,12 @@ SUBROUTINE NodalVariableInit(Model, Solver, Timestep, TransientSimulation )
   INTEGER,PARAMETER :: io=26
   INTEGER, ALLOCATABLE :: GlobalToLocalPerm(:)
   REAL(KIND=dp), POINTER :: NodalVariableValues(:)
-  REAL(KIND=dp) :: InputField, ValueOffset
+  REAL(KIND=dp) :: InputField, InitValue, ValueOffset
   INTEGER :: DIM, i, j, CurrentNode, NumberOfNodes, MaxNumberOfGNodes, MinNumberOfGNodes,&
        OK,  counter, localGlobalRange
   CHARACTER(LEN=MAX_NAME_LEN), PARAMETER :: SolverName="NodalVariableInit"
   CHARACTER(LEN=MAX_NAME_LEN) :: NodalVariableName,NodalVariableFileName
-  LOGICAL :: Visited = .False., Found, Parallel, GotIt
+  LOGICAL :: Visited = .FALSE., Found, Parallel, GotIt, FromFile=.FALSE.
 
   !SAVE Visited
   !,DIM,CurrentRockMaterial,NumberOfRockRecords
@@ -4435,7 +4441,7 @@ SUBROUTINE NodalVariableInit(Model, Solver, Timestep, TransientSimulation )
 
   CALL Info(SolverName, '-----------------------------------', Level=1)
   CALL Info(SolverName, 'Initializing variable to reference ', Level=1)
-  CALL Info(SolverName, 'levels in material file            ', Level=1)
+  CALL Info(SolverName, 'levels (either file or IC)         ', Level=1)
   CALL Info(SolverName, '-----------------------------------', Level=1)
 
 
@@ -4466,7 +4472,7 @@ SUBROUTINE NodalVariableInit(Model, Solver, Timestep, TransientSimulation )
   NodalVariableValues = 0.0_dp
 
   NodalVariableFileName = ListGetString(SolverParams, &
-       'Nodal Variable File', GotIt, Unfoundfatal=.TRUE. )
+       'Nodal Variable File', FromFile )
 
   ValueOffset = GetConstReal(SolverParams,'Variable Offset',GotIt)
   IF (.NOT.GotIt) THEN
@@ -4476,66 +4482,76 @@ SUBROUTINE NodalVariableInit(Model, Solver, Timestep, TransientSimulation )
     CALL INFO(SolverName,Message,Level=3)
   END IF
 
-  NumberOfNodes = Mesh % NumberOfNodes
-
-  IF (Parallel) THEN
-    MaxNumberOfGNodes = MAXVAL(Mesh % ParallelInfo % GlobalDOFs)
-    MinNumberOfGNodes = MINVAL(Mesh % ParallelInfo % GlobalDOFs)
-    !localGlobalRange = MaxNumberOfGNodes - MinNumberOfGNodes
-    IF (MaxNumberOfGNodes <= MinNumberOfGNodes) CALL FATAL(SolverName,"No nodes in parallel domain")
-    ALLOCATE(GlobalToLocalPerm(MinNumberOfGNodes:MaxNumberOfGNodes), STAT=OK)
-    IF (OK /= 0) CALL FATAL(SolverName,"Allocation error of GlobalToLocalPerm")
-    GlobalToLocalPerm = 0
-    DO I=1,NumberOfNodes
-      GlobalToLocalPerm(Mesh % ParallelInfo % GlobalDOFs(I)) = I
-    END DO
-    PRINT *, TRIM(SolverName),": ParENV:",ParEnv % MyPE,".  Global Nodal Numbers from",&
-         MinNumberOfGNodes,"to",MaxNumberOfGNodes
-  ELSE
-    MinNumberOfGNodes = 1
-    MaxNumberOfGNodes = NumberOfNodes   
-  END IF
-
-  OPEN(unit = io, file = TRIM(NodalVariableFileName), status = 'old',action='read',iostat = ok)
-  IF (ok /= 0) THEN
-    WRITE(Message,'(A,A)') 'Unable to open file ',TRIM(NodalVariableFileName)
-    CALL FATAL(TRIM(SolverName),TRIM(message))
-  ELSE
-    !------------------------------------------------------------------------------
-    ! Read in the number of records ordered in global node-numbering
-    ! in file (first line integer)
-    !------------------------------------------------------------------------------
-    DO J=1,MaxNumberOfGNodes ! all or in parallel up to max global index
-      READ (io, *, END=70, IOSTAT=OK, ERR=80) counter, InputField
-      IF (counter .NE. J) CALL FATAL(SolverName,'No concecutive numbering in file')
-      IF (J < MinNumberOfGNodes) CYCLE
-
-      IF (Parallel) THEN
-        I = GlobalToLocalPerm(J)
-        IF (I == 0) CYCLE ! point in range, but not in partition        
-      ELSE
-        I=J
-      END IF
-      !IF ((NodalVariablePerm(I)<1) .OR. (NodalVariablePerm(I)>NumberOfNodes)) THEN
-      !  PRINT *, "NodalVariableInit:", ParEnv % myPE, "NodalVariablePerm(",I,")=",&
-      !       NodalVariablePerm(I),">",NumberOfNodes
-      !  CALL FATAL(SolverName,'No corresponding entry of target variable')
-      !END IF
-      NodalVariableValues(NodalVariablePerm(I)) = InputField + ValueOffset
-      ! PRINT *,i,counter
-    END DO
-    !PRINT *, "END", i,counter
-70  IF (J-1 .NE. MaxNumberOfGNodes) THEN
-      WRITE (Message,*) 'Number of records ',i,' in file ',&
-           TRIM(NodalVariableFileName),' does not match number of nodes ',&
-           NumberOfNodes, ' in mesh'
+  IF (.NOT.FromFile) THEN
+    InitValue = GetConstReal(SolverParams,TRIM(NodalVariableName),Found)
+    IF (.NOT.Found) THEN
+      WRITE(Message,*) 'No entry for ',TRIM(NodalVariableName),&
+           ' found in Solver section (IC version not implemented)'
       CALL FATAL(SolverName,Message)
     END IF
-    CLOSE (io)
-    IF (Parallel) &
-         DEALLOCATE(GlobalToLocalPerm)
-    RETURN
-80  CALL FATAL(SolverName,"I/O error")
+    NodalVariableValues = InitValue + ValueOffset
+  ELSE
+    NumberOfNodes = Mesh % NumberOfNodes
+
+    IF (Parallel) THEN
+      MaxNumberOfGNodes = MAXVAL(Mesh % ParallelInfo % GlobalDOFs)
+      MinNumberOfGNodes = MINVAL(Mesh % ParallelInfo % GlobalDOFs)
+      !localGlobalRange = MaxNumberOfGNodes - MinNumberOfGNodes
+      IF (MaxNumberOfGNodes <= MinNumberOfGNodes) CALL FATAL(SolverName,"No nodes in parallel domain")
+      ALLOCATE(GlobalToLocalPerm(MinNumberOfGNodes:MaxNumberOfGNodes), STAT=OK)
+      IF (OK /= 0) CALL FATAL(SolverName,"Allocation error of GlobalToLocalPerm")
+      GlobalToLocalPerm = 0
+      DO I=1,NumberOfNodes
+        GlobalToLocalPerm(Mesh % ParallelInfo % GlobalDOFs(I)) = I
+      END DO
+      PRINT *, TRIM(SolverName),": ParENV:",ParEnv % MyPE,".  Global Nodal Numbers from",&
+           MinNumberOfGNodes,"to",MaxNumberOfGNodes
+    ELSE
+      MinNumberOfGNodes = 1
+      MaxNumberOfGNodes = NumberOfNodes   
+    END IF
+
+    OPEN(unit = io, file = TRIM(NodalVariableFileName), status = 'old',action='read',iostat = ok)
+    IF (ok /= 0) THEN
+      WRITE(Message,'(A,A)') 'Unable to open file ',TRIM(NodalVariableFileName)
+      CALL FATAL(TRIM(SolverName),TRIM(message))
+    ELSE
+      !------------------------------------------------------------------------------
+      ! Read in the number of records ordered in global node-numbering
+      ! in file (first line integer)
+      !------------------------------------------------------------------------------
+      DO J=1,MaxNumberOfGNodes ! all or in parallel up to max global index
+        READ (io, *, END=70, IOSTAT=OK, ERR=80) counter, InputField
+        IF (counter .NE. J) CALL FATAL(SolverName,'No concecutive numbering in file')
+        IF (J < MinNumberOfGNodes) CYCLE
+
+        IF (Parallel) THEN
+          I = GlobalToLocalPerm(J)
+          IF (I == 0) CYCLE ! point in range, but not in partition        
+        ELSE
+          I=J
+        END IF
+        !IF ((NodalVariablePerm(I)<1) .OR. (NodalVariablePerm(I)>NumberOfNodes)) THEN
+        !  PRINT *, "NodalVariableInit:", ParEnv % myPE, "NodalVariablePerm(",I,")=",&
+        !       NodalVariablePerm(I),">",NumberOfNodes
+        !  CALL FATAL(SolverName,'No corresponding entry of target variable')
+        !END IF
+        NodalVariableValues(NodalVariablePerm(I)) = InputField + ValueOffset
+        ! PRINT *,i,counter
+      END DO
+      !PRINT *, "END", i,counter
+70    IF (J-1 .NE. MaxNumberOfGNodes) THEN
+        WRITE (Message,*) 'Number of records ',i,' in file ',&
+             TRIM(NodalVariableFileName),' does not match number of nodes ',&
+             NumberOfNodes, ' in mesh'
+        CALL FATAL(SolverName,Message)
+      END IF
+      CLOSE (io)
+      IF (Parallel) &
+           DEALLOCATE(GlobalToLocalPerm)
+      RETURN
+80    CALL FATAL(SolverName,"I/O error")
+    END IF
   END IF
 END SUBROUTINE NodalVariableInit
 
