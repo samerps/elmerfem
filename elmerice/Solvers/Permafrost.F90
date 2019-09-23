@@ -144,7 +144,7 @@ SUBROUTINE PermafrostGroundwaterFlow( Model,Solver,dt,TransientSimulation )
        Load_h, Temperature_h, Pressure_h, Salinity_h, Porosity_h,&
        TemperatureDt_h, SalinityDt_h, StressInv_h, StressInvDt_h, &
        Vstar1_h, Vstar2_h, Vstar3_h, &
-       ActiveMassMatrix, InitializeSteadyState
+       ActiveMassMatrix, InitializeSteadyState, ComputeDt
   !------------------------------------------------------------------------------
   CALL DefaultStart()
 
@@ -172,9 +172,13 @@ SUBROUTINE PermafrostGroundwaterFlow( Model,Solver,dt,TransientSimulation )
        'Nonlinear System Max Iterations',Found,minv=1)
   IF(.NOT. Found ) maxiter = 1
 
-  ComputeDt = GetLogical(Params,'Compute Time Derivatives',Found)
-  !FluxOutput = GetLogical(Params,'Groundwater Flux Output',Found)
-
+  IF (FirstTime) THEN
+    ComputeDt = GetLogical(Params,'Compute Time Derivatives',Found)
+    IF (.NOT.Found) ComputeDt = .FALSE.
+    !FluxOutput = GetLogical(Params,'Groundwater Flux Output',Found)
+    ComputeDeformation = ListGetLogical(params,'Compute Deformation', Found)
+    IF (.NOT.Found) ComputeDeformation = .FALSE.
+  END IF
   
   ! solver variable
   Pressure => Solver % Variable % Values
@@ -199,12 +203,15 @@ SUBROUTINE PermafrostGroundwaterFlow( Model,Solver,dt,TransientSimulation )
     IF (ComputeDt) THEN
       CALL ListInitElementKeyword( TemperatureDt_h, 'Material', 'Temperature Velocity Variable' )
       CALL ListInitElementKeyword( SalinityDt_h, 'Material', 'Salinity Velocity Variable' )
-      CALL ListInitElementKeyword( StressInvDt_h, 'Material', 'Stress Invariant Velocity Variable' )
     END IF
+    IF (ComputeDeformation) &
+         CALL ListInitElementKeyword( StressInvDt_h, 'Material', 'Stress Invariant Velocity Variable' )
   END IF
   
   !StressInvName =  ListGetString(params,'Ground Stress Invariant Variable Name',ComputeDeformation)
-  DeformationName = ListGetString(params,'Ground Deformation Variable Name ',DeformationExists)
+  !DeformationName = ListGetString(params,'Ground Deformation Variable Name ',DeformationExists)
+  
+
 
   IF (FirstTime) THEN
     OffsetDensity = GetLogical(Model % Constants,'Permafrost Offset Density', Found)
