@@ -50,7 +50,7 @@ SUBROUTINE VtuOutputSolver( Model,Solver,dt,TransientSimulation )
   TYPE(Variable_t), POINTER :: Var
   INTEGER :: i, j, k, l, n, m, Partitions, Part, ExtCount, FileindexOffSet, MeshDim, PrecBits, &
              PrecSize, IntSize, FileIndex
-  CHARACTER(MAX_NAME_LEN) :: Dir
+  CHARACTER(MAX_NAME_LEN) :: OutputDirectory
   LOGICAL :: Visited = .FALSE.
   REAL(KIND=dp) :: DoubleWrk
   REAL :: SingleWrk
@@ -153,28 +153,14 @@ SUBROUTINE VtuOutputSolver( Model,Solver,dt,TransientSimulation )
     CALL Info('VtuOutputSolver', Message )
   END IF
 
-
   BaseFile = FilePrefix
-  IF ( .NOT. FileNameQualified(FilePrefix) ) THEN
-    Dir = GetString( Params,'Output Directory',GotIt) 
-    IF(.NOT. GotIt) Dir = GetString( Model % Simulation,&
-        'Output Directory',GotIt)     
-    IF( GotIt ) THEN
-      IF( LEN_TRIM(Dir) > 0 ) THEN
-        BaseFile = TRIM(Dir)// '/' //TRIM(FilePrefix)
-        CALL MakeDirectory( TRIM(Dir) // CHAR(0) )
-      END IF
-    ELSE 
-      BaseFile = TRIM(OutputPath) // '/' // TRIM(Mesh % Name) // '/' //TRIM(FilePrefix)
-    END IF
-  END IF
+
+  CALL SolverOutputDirectory( Solver, BaseFile, OutputDirectory, UseMeshDir = .TRUE.  )
+  BaseFile = TRIM(OutputDirectory)// '/' //TRIM(BaseFile)
+  
   CALL Info('VtuOutputSolver','Full filename base is: '//TRIM(Basefile), Level=10 )
-
-  
-
-  
+    
   FixedMesh = ListGetLogical(Params,'Fixed Mesh',GotIt)
-
   
   !------------------------------------------------------------------------------
   ! Initialize stuff for masked saving
@@ -254,6 +240,7 @@ SUBROUTINE VtuOutputSolver( Model,Solver,dt,TransientSimulation )
       Model % CurrentElement => CurrentElement
 
       IF( GetElementFamily( CurrentElement ) == 1 ) CYCLE          
+      IF (.NOT. IsBoundaryElement .AND. CurrentElement % BodyId < 1) CYCLE
       
       IF( SkipHalo .OR. SaveOnlyHalo ) THEN
         IF( IsBoundaryElement ) THEN
