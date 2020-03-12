@@ -23,7 +23,7 @@
 !
 !/******************************************************************************
 ! *
-! *  Authors: Peter Råback & Juha Ruokolainen
+! *  Authors: Peter RÃ¥back & Juha Ruokolainen
 ! *  Email:   Peter.Raback@csc.fi & Juha.Ruokolainen@csc.fi
 ! *  Web:     http://www.csc.fi/elmer
 ! *  Address: CSC - IT Center for Science Ltd.
@@ -1235,11 +1235,11 @@ RETURN
           1000, ELMER_COMM_WORLD, ierr )
     END DO
     CALL MPI_WaitAll( NoPartitions, Requests, MPI_STATUSES_IGNORE, ierr )
-    
+
     n = SUM(Recv_Parts)
-    CALL Info('ChangeParticlePartition','Number of particles to recieve: '&
+    CALL Info('ChangeParticlePartition','Number of particles to receive: '&
         //TRIM(I2S(n)),Level=10)
-   
+
     CALL MPI_ALLREDUCE( n, nReceived, 1, MPI_INTEGER, &
         MPI_SUM, ELMER_COMM_WORLD, ierr )
     IF ( nReceived==0 ) THEN
@@ -1247,10 +1247,10 @@ RETURN
       DEALLOCATE(Recv_Parts, Requests, ExcInfo, Perm, Neigh)
       RETURN
     ELSE
-      CALL Info('ChangeParticlePartition','Global number of particles to recieve: '&
-          //TRIM(I2S(nReceived)),Level=10)      
+      CALL Info('ChangeParticlePartition','Global number of particles to receive: '&
+          //TRIM(I2S(nReceived)),Level=10)
     END IF
-   
+
     n = SUM( ExcInfo(1:NoPartitions) % n )
     CALL Info('ChangeParticlePartition','Total number of particles to sent: '&
         //TRIM(I2S(n)),Level=10)
@@ -1442,8 +1442,8 @@ RETURN
 
     ! Recv particles:
     ! ---------------
-    CALL Info('ChangeParticlePartition','Now recieving particle data',Level=14)
-    
+    CALL Info('ChangeParticlePartition','Now receiving particle data',Level=14)
+
     n = SUM(Recv_Parts)
 
     CALL DeleteLostParticles(Particles)
@@ -1750,8 +1750,8 @@ RETURN
       CALL Info('ParticleAdvectParallel','Global particles to be sent: '&
           //TRIM(I2S(nSent)),Level=12)
     ELSE
-      ! If nobody is sending any particles then there can be no need to reveive particles either
-      ! Thus we can make an early exit. 
+      ! If nobody is sending any particles then there can be no need to receive particles either
+      ! Thus we can make an early exit.
       DEALLOCATE(SentParts, RecvParts, Requests )
       CALL Info('ParticleAdvectParallel','Nothing to do in parallel!',Level=15)
       RETURN
@@ -1770,9 +1770,9 @@ RETURN
       CALL MPI_RECV( RecvParts(i), 1, MPI_INTEGER, i-1, &
           1000, ELMER_COMM_WORLD, Status, ierr )
     END DO
-    
+
     n = SUM(RecvParts)
-    CALL Info('ParticleAdvectParallel','Particles to be recieved: '//TRIM(I2S(n)),Level=12)
+    CALL Info('ParticleAdvectParallel','Particles to be received: '//TRIM(I2S(n)),Level=12)
 
     CALL MPI_ALLREDUCE( n, nReceived, 1, MPI_INTEGER, &
         MPI_SUM, ELMER_COMM_WORLD, ierr )
@@ -1782,28 +1782,28 @@ RETURN
       RETURN
     END IF
 
-    CALL Info('ParticleAdvectParallel','Total number of particles to be recieved: '&
-        //TRIM(I2S(nReceived)),Level=12)    
+    CALL Info('ParticleAdvectParallel','Total number of particles to be received: '&
+        //TRIM(I2S(nReceived)),Level=12)
 
     n = 2*(n + MPI_BSEND_OVERHEAD*2*NoPartitions)
     CALL CheckBuffer(n)
 
-    CALL Info('ParticleAdvectParallel','Buffer size for sending and recieving: ' &
-        //TRIM(I2S(n)),Level=14)    
+    CALL Info('ParticleAdvectParallel','Buffer size for sending and receiving: ' &
+        //TRIM(I2S(n)),Level=14)
 
 
-    ! Allocate sent and recieve buffers based on the maximum needed size.
+    ! Allocate sent and receive buffers based on the maximum needed size.
     !--------------------------------------------------------------------
     n = MAXVAL( SentParts )
     ALLOCATE( SentReal(n), SentInt(n) )
     CALL Info('ParticleAdvectParallel','Allocating sent buffer of size: '&
         //TRIM(I2S(n)),Level=18)
 
-    n = MAXVAL( RecvParts ) 
+    n = MAXVAL( RecvParts )
     ALLOCATE( RecvReal(n), RecvInt(n) )
-    CALL Info('ParticleAdvectParallel','Allocating recieve buffer of size: '&
+    CALL Info('ParticleAdvectParallel','Allocating receive buffer of size: '&
         //TRIM(I2S(n)),Level=18)
-   
+
     ! Send particles:
     ! ---------------
     CALL Info('ParticleAdvectParallel','Now sending field',Level=14)
@@ -1831,10 +1831,10 @@ RETURN
 
 
     ! Recv particles:
-    ! ---------------   
-    CALL Info('ParticleAdvectParallel','Now recieving field',Level=14)
+    ! ---------------
+    CALL Info('ParticleAdvectParallel','Now receiving field',Level=14)
 
-    nerr = 0 
+    nerr = 0
     DO j=1,NoPartitions
 
       IF( j-1 == ParEnv % MyPe ) CYCLE
@@ -1857,9 +1857,9 @@ RETURN
         RecvField(k) = RecvReal(l)
       END DO
     END DO
-        
+
     IF( nerr > 0 ) THEN
-      CALL Info('ParticleAdvectParallel','Invalid recieved index in particles: '//TRIM(I2S(nerr)))
+      CALL Info('ParticleAdvectParallel','Invalid received index in particles: '//TRIM(I2S(nerr)))
     END IF
 
     CALL MPI_BARRIER( ELMER_COMM_WORLD, ierr )
@@ -2208,6 +2208,60 @@ RETURN
   END FUNCTION CharacteristicElementSize
 
 
+
+  !-----------------------------------------------------------------------
+  !> Computes the characterestic time spent for each direction separately.
+  !> Currently can only be computed for one particle at a time. 
+  !-----------------------------------------------------------------------
+  FUNCTION CharacteristicUnisoTime( Particles, No ) RESULT ( CharTime )
+    
+    TYPE(Particle_t), POINTER :: Particles
+    REAL(KIND=dp) :: CharTime
+    INTEGER, OPTIONAL :: No
+    
+    REAL(KIND=dp) :: Center(3),CartSize(3),Velo(3)
+    TYPE(Element_t), POINTER :: Element
+    TYPE(Nodes_t) :: Nodes
+    TYPE(Mesh_t), POINTER :: Mesh
+    INTEGER :: i, t, n, dim
+    LOGICAL :: Visited = .FALSE.
+    
+    SAVE Visited, Mesh, dim, Nodes
+
+    IF(.NOT. Visited ) THEN
+      Mesh => GetMesh()
+      dim = Mesh % MeshDim
+      Visited = .TRUE.
+    END IF
+
+    ! Absolute of velocity in each direction
+    Velo(1:dim) = ABS( Particles % Velocity(No,1:dim) )
+
+    t = Particles % ElementIndex(No)               
+    Element => Mesh % Elements(t)      
+    CALL GetElementNodes( Nodes, Element ) 
+    n = Element % TYPE % NumberOfNodes
+
+    ! Center point of element
+    Center(1) = SUM( Nodes % x(1:n) ) / n
+    Center(2) = SUM( Nodes % y(1:n) ) / n
+    Center(3) = SUM( Nodes % z(1:n) ) / n
+
+    ! Average distance from center multiplied by two in eadh direction
+    CartSize(1) = 2 * SUM( ABS( Nodes % x(1:n) - Center(1) ) ) / n
+    CartSize(2) = 2 * SUM( ABS( Nodes % y(1:n) - Center(2) ) ) / n
+    CartSize(3) = 2 * SUM( ABS( Nodes % z(1:n) - Center(3) ) ) / n
+
+    CharTime = HUGE( CharTime )
+    DO i=1,dim
+      IF( CharTime * Velo(i) > CartSize(i) ) THEN
+        CharTime = CartSize(i) / Velo(i)
+      END IF      
+    END DO
+    
+  END FUNCTION CharacteristicUnisoTime
+
+
   
   !---------------------------------------------------------
   !> Computes the characterestic time spent in an element
@@ -2430,7 +2484,7 @@ RETURN
               IF( meanval < 0.0_dp ) CYCLE
             END IF
 
-            ! If some of bulk elements have been found avtive
+            ! If some of bulk elements have been found active
             j = j + 1
             InvPerm(j) = i
 
@@ -3468,10 +3522,10 @@ RETURN
     
   END SUBROUTINE SegmentElementIntersection2
   
-  
+
   !---------------------------------------------------------------------------
-  !> This subroutine tests whether a particle is within element using the 
-  !> consistant strategy with the above algorithm.
+  !> This subroutine tests whether a particle is within element using the
+  !> consistent strategy with the above algorithm.
   !---------------------------------------------------------------------------
   FUNCTION SegmentElementInside(Mesh,BulkElement,Rfin,Debug) RESULT ( Inside )
     !---------------------------------------------------------------------------
@@ -4211,10 +4265,10 @@ RETURN
       CALL SetParticleCoord( Particles, No, Rfin  )                
       IF( ElementIndex == 0 ) Velo = 0.0_dp
 
-      CALL SetParticleVelo( Particles, No, Velo  )                
+      CALL SetParticleVelo( Particles, No, Velo  )
     END DO
 
-    ! Change the partion in where the particles are located
+    ! Change the partition in where the particles are located
     ! Only applies to parallel cases.
     !------------------------------------------------------------------------
     PartitionChanges = ChangeParticlePartition( Particles )
@@ -4580,7 +4634,7 @@ RETURN
 
   !-------------------------------------------------------------
   !> This subroutine may be used to enquire position dependent material data.
-  !> Also if the particle is splitted between two elements then this 
+  !> Also if the particle is split between two elements then this 
   !> routine can assess the data on the secondary mesh.
   !-------------------------------------------------------------
   FUNCTION GetMaterialPropertyInMesh(PropertyName, BulkElement, Basis, &
@@ -4743,8 +4797,8 @@ RETURN
       Particles % CumClosestParticle(i+1) = Particles % CumClosestParticle(i)+j
     END DO
     Particles % MaxClosestParticles = MaxClosest
-    
-    ! And finally, add the closest neigbours to the table 
+
+    ! And finally, add the closest neighbors to the table
     !----------------------------------------------------------------
     IF ( ASSOCIATED(Particles % ClosestParticle) ) &
         DEALLOCATE(Particles % ClosestParticle )
@@ -5177,9 +5231,9 @@ RETURN
   !> Advance the particles with a time step. The timestep may
   !> also be an intermediate Runge-Kutta step.
   !---------------------------------------------------------
-  SUBROUTINE ParticleAdvanceTimestep( Particles, RKstep )
+  SUBROUTINE ParticleAdvanceTimestep( Particles, RKstepInput )
     TYPE(Particle_t), POINTER :: Particles
-    INTEGER, OPTIONAL :: RKstep
+    INTEGER, OPTIONAL :: RKStepInput
 
     REAL(KIND=dp) :: dtime
     TYPE(Variable_t), POINTER :: Var, TimeVar, DistVar, DtVar
@@ -5187,7 +5241,7 @@ RETURN
     REAL(KIND=dp) :: ds, dCoord(3),Coord(3),Velo(3),Speed0,Speed
     INTEGER :: dim, Status, TimeOrder, No, NoMoving
     TYPE(ValueList_t), POINTER :: Params
-    INTEGER :: NoParticles
+    INTEGER :: NoParticles, RKStep
     LOGICAL :: Found, Visited = .FALSE.,RK2,HaveSpeed0
 
     REAL(KIND=dp) :: mass, drag
@@ -5231,6 +5285,8 @@ RETURN
     NoGroups = Particles % NumberOfGroups     
     NoMoving = 0
     RK2 = Particles % RK2
+    RKStep = 0
+    IF(PRESENT(RKStepInput)) RKStep=RKStepInput
 
     IF( RK2 .AND. .NOT. ASSOCIATED( Particles % PrevVelocity ) ) THEN
       ALLOCATE( Particles % PrevVelocity( &
@@ -5314,11 +5370,12 @@ RETURN
       ELSE
         CALL Fatal('ParticleAdvanceTimestep','Unknown time order')
       END IF
-
+       
+         
       IF( RK2 .AND. RKStep == 2 ) THEN
-        Velo(1:dim) = &
-          ( 2 * Particles % Velocity(No,:) - Particles % PrevVelocity(No,:) )
-      ELSE
+         Velo(1:dim) = &
+           ( 2 * Particles % Velocity(No,:) - Particles % PrevVelocity(No,:) )
+       ELSE
         Velo(1:dim) = Particles % Velocity(No,:) 	
       END IF
 
@@ -5362,15 +5419,15 @@ RETURN
   !---------------------------------------------------------
   !> Advance some tracer quantities related to the particles.
   !---------------------------------------------------------
-  SUBROUTINE ParticlePathIntegral( Particles, RKstep )
+  SUBROUTINE ParticlePathIntegral( Particles, RKstepInput )
     TYPE(Particle_t), POINTER :: Particles
-    INTEGER, OPTIONAL :: RKstep
+    INTEGER, OPTIONAL :: RKstepInput
 
     TYPE(Variable_t), POINTER :: TimeIntegVar, DistIntegVar, DtVar
     LOGICAL :: GotVar, RK2
     REAL(KIND=dp) :: ds,dtime,Coord(3),PrevCoord(3),LocalCoord(3),Velo(3),u,v,w,&
         SourceAtPath,detJ,RKCoeff
-    INTEGER :: dim, Status
+    INTEGER :: dim, Status, RKStep
     TYPE(ValueList_t), POINTER :: Params
     INTEGER :: NoParticles, No, n, NoVar, i, j, bf_id
     LOGICAL :: Found, Stat, Visited = .FALSE.
@@ -5391,6 +5448,9 @@ RETURN
 
 
     ! If Runge-Kutta is used take the mid-point rule.
+    RKSTep = 0
+    IF( PRESENT( RKStepInput ) ) RKStep = RKStepInput
+
     IF( RKStep > 1 ) RETURN
     
     IF(.NOT. Visited ) THEN
@@ -5797,13 +5857,13 @@ RETURN
     INTEGER :: No, Status    
     REAL(KIND=dp) :: dt,dt0,tfin,tprev,dsgoal,hgoal,dtmax,dtmin,dtup,dtlow, &
         CharSpeed, CharTime, dtave
-    LOGICAL :: GotIt,TfinIs,NStepIs,DsGoalIs,HgoalIs,DtIs
-    INTEGER :: nstep, TimeStep, PrevTimeStep = -1, flag
+    LOGICAL :: GotIt,TfinIs,NStepIs,DsGoalIs,HgoalIs,HgoalIsUniso,DtIs
+    INTEGER :: nstep, TimeStep, PrevTimeStep = -1
     TYPE(ValueList_t), POINTER :: Params
     TYPE(Variable_t), POINTER :: TimeVar, DtVar
     
     SAVE dt0,dsgoal,hgoal,dtmax,dtmin,DtIs,Nstep,&
-        tprev,Tfin,TfinIs,DsGoalIs,HgoalIs,PrevTimeStep, &
+        tprev,Tfin,TfinIs,DsGoalIs,HgoalIs,HgoalIsUniso,PrevTimeStep, &
 	DtVar,TimeVar
     
     dtout = 0.0_dp
@@ -5819,6 +5879,12 @@ RETURN
       
       ! Constraint by relative step size taken (1 means size of the element)
       hgoal = GetCReal( Params,'Timestep Courant Number',HGoalIs)
+
+      ! Constraint by relative step size taken (each cartesian direction of element)
+      HGoalIsUniso = .FALSE.
+      IF(.NOT. HGoalIs ) THEN
+        hgoal = GetCReal( Params,'Timestep Unisotropic Courant Number',HGoalIsUniso)
+      END IF
       
       Nstep = GetInteger( Params,'Max Timestep Intervals',GotIt)
       IF(.NOT. GotIt) Nstep = 1
@@ -5866,12 +5932,13 @@ RETURN
       ELSE IF( HgoalIs ) THEN
         CharTime = CharacteristicElementTime( Particles )
         dt = Hgoal * CharTime ! ElementH / Speed
-
         !PRINT *,'ratio of timesteps:',tfin/dt
       ELSE IF( tfinIs ) THEN
         dt = tfin / Nstep
+      ELSE IF( HgoalIsUniso ) THEN
+        CALL Fatal('GetParticleTimesStep','Cannot use unisotropic courant number with constant dt!')
       ELSE
-        CALL Fatal('GetParticlesTimeStep','Cannot determine timestep size!')
+        CALL Fatal('GetParticleTimeStep','Cannot determine timestep size!')
       END IF
 
       ! Constrain the timestep
@@ -5901,22 +5968,19 @@ RETURN
 
 	tprev = TimeVar % Values(No)        
 
-	flag = 1
-
         IF( DtIs ) THEN
           dt = dt0 
-	  flag = 2
         ELSE IF( DsGoalIs ) THEN
           CharSpeed = CharacteristicSpeed( Particles, No )     
           dt = dsgoal / CharSpeed
-	  flag = 3
         ELSE IF( HgoalIs ) THEN
           CharTime = CharacteristicElementTime( Particles, No )     
           dt = Hgoal * CharTime ! ElementH / Speed
-	  flag = 4
         ELSE IF( tfinIs ) THEN
           dt = tfin / Nstep
-	  flag = 5
+        ELSE IF( HgoalIsUniso ) THEN
+          CharTime = CharacteristicUnisoTime( Particles, No )     
+          dt = Hgoal * CharTime ! ElementH / Speed
         ELSE
           CALL Fatal('GetParticlesTimeStep','Cannot determine timestep size!')
         END IF

@@ -98,21 +98,21 @@ CONTAINS
      IF ( ASSOCIATED( Matrix % Perm ) )        DEALLOCATE( Matrix % Perm )
      IF ( ASSOCIATED( Matrix % InvPerm ) )     DEALLOCATE( Matrix % InvPerm )
 
-     IF ( ASSOCIATED( Matrix % Cols ) ) THEN
-        IF ( ASSOCIATED( Matrix % Cols, Matrix % ILUCols ) ) &
-           NULLIFY( Matrix % ILUCols )
-        DEALLOCATE( Matrix % Cols )
-     END IF
-
      IF ( ASSOCIATED( Matrix % Rows ) ) THEN
-        IF ( ASSOCIATED( Matrix % Rows, Matrix % ILURows ) ) &
-           NULLIFY( Matrix % ILURows )
+        IF ( ASSOCIATED(Matrix % Rows, Matrix % ILURows) .OR. SIZE(Matrix % Rows)==0 )  &
+           Matrix % ILURows => Null()
         DEALLOCATE( Matrix % Rows )
      END IF
 
+     IF ( ASSOCIATED( Matrix % Cols ) ) THEN
+        IF ( ASSOCIATED(Matrix % Cols, Matrix % ILUCols) .OR. SIZE(Matrix % Cols)==0 ) &
+           Matrix % ILUCols => Null()
+        DEALLOCATE( Matrix % Cols )
+     END IF
+
      IF ( ASSOCIATED( Matrix % Diag ) ) THEN
-        IF ( ASSOCIATED( Matrix % Diag, Matrix % ILUDiag ) ) &
-           NULLIFY( Matrix % ILUDiag )
+        IF ( ASSOCIATED(Matrix % Diag, Matrix % ILUDiag) .OR. SIZE(Matrix % Diag)==0 ) &
+          Matrix % ILUDiag => Null()
         DEALLOCATE( Matrix % Diag )
      END IF
 
@@ -128,8 +128,8 @@ CONTAINS
      IF ( ASSOCIATED( Matrix % BulkRHS   ) )   DEALLOCATE( Matrix % BulkRHS )
 
      IF ( ASSOCIATED( Matrix % ILUValues ) )   DEALLOCATE( Matrix % ILUValues )
-     IF ( ASSOCIATED( Matrix % ILUCols ) )     DEALLOCATE( Matrix % ILUCols )
      IF ( ASSOCIATED( Matrix % ILURows ) )     DEALLOCATE( Matrix % ILURows )
+     IF ( ASSOCIATED( Matrix % ILUCols ) )     DEALLOCATE( Matrix % ILUCols )
      IF ( ASSOCIATED( Matrix % ILUDiag ) )     DEALLOCATE( Matrix % ILUDiag )
 
      IF ( ASSOCIATED( Matrix % CRHS   ) )      DEALLOCATE( Matrix % CRHS )
@@ -353,7 +353,6 @@ CONTAINS
       FDOFS = 0
     END IF
 
-
     IndexSize = 128
     ALLOCATE( Indexes(IndexSize), STAT=istat )
     IF( istat /= 0 ) THEN
@@ -375,7 +374,8 @@ CONTAINS
           ALLOCATE( IndirectPairs( LocalNodes ) )
           IndirectPairs = 0
         END IF
-                
+                        
+
         DO t=1,Mesh % NumberOfBulkElements
           n = 0
           Elm => Mesh % Elements(t)
@@ -402,13 +402,73 @@ CONTAINS
           END DO
         END DO
 
-        DO t=1,Mesh % NumberOfEdges
+        IF( Mesh % NumberOfFaces == 0 ) THEN
+          DO t=1,Mesh % NumberOfEdges
+            n = 0
+            Elm => Mesh % Edges(t)
+            IF(.NOT. ASSOCIATED( Elm % BoundaryInfo ) ) CYCLE
+
+            Left => Elm % BoundaryInfo % Left
+            IF(.NOT. ASSOCIATED( Left ) ) CYCLE
+            IF ( .NOT. CheckElementEquation(Model,Left,Equation) ) CYCLE
+
+            Right => Elm % BoundaryInfo %  Right
+            IF(.NOT. ASSOCIATED( Right ) ) CYCLE
+            IF ( .NOT. CheckElementEquation(Model,Right,Equation) ) CYCLE
+
+            IF( Left % BodyId == Right % BodyId ) CYCLE
+
+            IF( DGIndirect ) THEN
+              DO i=1,Left % DGDOFs
+                k1 = ReOrder( Left % DgIndexes(i) )
+                DO j=1,Right % DGDOFs
+                  IF( Left % NodeIndexes(i) == Right % NodeIndexes(j) ) THEN
+                    k2 = ReOrder( Right % DgIndexes(j) )
+                    IF( k1 /= k2 ) THEN
+                      IndirectPairs( k1 ) = k2
+                      EXIT
+                    END IF
+                  END IF
+                END DO
+              END DO
+            END IF
+
+            FoundDG = FoundDG .OR. Left % DGDOFs > 0
+            DO j=1,Left % DGDOFs
+              n = n + 1
+              Indexes(n) = Left % DGIndexes(j)
+            END DO
+
+            FoundDG = FoundDG .OR. Right % DGDOFs > 0
+            DO j=1,Right % DGDOFs
+              n = n + 1
+              Indexes(n) = Right % DGIndexes(j)
+            END DO
+
+            DO i=1,n
+              k1 = Reorder(Indexes(i))
+              IF ( k1 <= 0 ) CYCLE
+              DO j=1,n
+                k2 = Reorder(Indexes(j))
+                IF ( k2 <= 0 ) CYCLE
+                Lptr => List_GetMatrixIndex( List,k1,k2 )
+              END DO
+            END DO
+          END DO
+        END IF
+
+        
+        DO t=1,Mesh % NumberOfFaces
           n = 0
-          Left => Mesh % Edges(t) % BoundaryInfo % Left
+
+          Elm => Mesh % Faces(t)
+          IF(.NOT. ASSOCIATED( Elm % BoundaryInfo ) ) CYCLE
+          
+          Left => Elm  % BoundaryInfo % Left
           IF(.NOT. ASSOCIATED( Left ) ) CYCLE
           IF ( .NOT. CheckElementEquation(Model,Left,Equation) ) CYCLE
 
-          Right => Mesh % Edges(t) % BoundaryInfo %  Right
+          Right => Elm % BoundaryInfo %  Right
           IF(.NOT. ASSOCIATED( Right ) ) CYCLE
           IF ( .NOT. CheckElementEquation(Model,Right,Equation) ) CYCLE
 
@@ -416,59 +476,17 @@ CONTAINS
 
           IF( DGIndirect ) THEN
             DO i=1,Left % DGDOFs
+              k1 = ReOrder( Left % DgIndexes(i) )
               DO j=1,Right % DGDOFs
                 IF( Left % NodeIndexes(i) == Right % NodeIndexes(j) ) THEN
-                  IndirectPairs( ReOrder( Left % DgIndexes(i) ) ) = &
-                      ReOrder( Right % DgIndexes(j) ) 
-                  EXIT
-                END IF
-              END DO
-            END DO
-          END IF            
-
-          FoundDG = FoundDG .OR. Left % DGDOFs > 0
-          DO j=1,Left % DGDOFs
-            n = n + 1
-            Indexes(n) = Left % DGIndexes(j)
-          END DO
-
-          FoundDG = FoundDG .OR. Right % DGDOFs > 0
-          DO j=1,Right % DGDOFs
-            n = n + 1
-            Indexes(n) = Right % DGIndexes(j)
-          END DO
-
-          DO i=1,n
-            k1 = Reorder(Indexes(i))
-            IF ( k1 <= 0 ) CYCLE
-            DO j=1,n
-              k2 = Reorder(Indexes(j))
-              IF ( k2 <= 0 ) CYCLE
-              Lptr => List_GetMatrixIndex( List,k1,k2 )
-            END DO
-          END DO
-        END DO
-
-
-        DO t=1,Mesh % NumberOfFaces
-          n = 0
-          Left => Mesh % Faces(t) % BoundaryInfo % Left
-          IF(.NOT. ASSOCIATED( Left ) ) CYCLE
-          IF ( .NOT. CheckElementEquation(Model,Left,Equation) ) CYCLE
-
-          Right => Mesh % Edges(t) % BoundaryInfo %  Right
-          IF(.NOT. ASSOCIATED( Right ) ) CYCLE
-          IF ( .NOT. CheckElementEquation(Model,Right,Equation) ) CYCLE
-
-          IF( Left % BodyId == RightBodyId ) CYCLE
-
-          IF( DGIndirect ) THEN
-            DO i=1,Left % DGDOFs
-              DO j=1,Right % DGDOFs
-                IF( Left % NodeIndexes(i) == Right % NodeIndexes(j) ) THEN
-                  IndirectPairs( ReOrder( Left % DgIndexes(i) ) ) = &
-                      ReOrder( Right % DgIndexes(j)) 
-                  EXIT
+                  k2 = ReOrder( Right % DgIndexes(j) )
+                  IF( k1 /= k2 ) THEN
+                    IF( IndirectPairs(k1) > 0 .AND. IndirectPairs(k1) /= k2 ) THEN
+                      PRINT *,'Problematic node:',k1,IndirectPairs(k1),k2
+                    END IF
+                    IndirectPairs( k1 ) = k2
+                    EXIT
+                  END IF
                 END IF
               END DO
             END DO
@@ -500,7 +518,7 @@ CONTAINS
         IF( DGIndirect ) THEN
           DO k1 = 1, LocalNodes
             k2 = IndirectPairs(k1)
-            IF( k2 == 0 ) CYCLE
+            IF( k2 == 0 ) CYCLE 
             !PRINT *,'Exchange structure between rows:',k1,k2
             CALL List_ExchangeRowStructure( List, k1, k2 ) 
           END DO
@@ -581,6 +599,66 @@ CONTAINS
       END IF
     END IF ! DGSolver
 
+    
+    !     Diffuse gray radiation condition:
+    !     ---------------------------------
+    Radiation = ListGetLogical( Solver % Values, 'Radiation Solver', Found )
+    IF ( .NOT. Found .AND. PRESENT(Equation) ) &
+        Radiation = Radiation .OR. (Equation == 'heat equation')
+    
+    IF ( Radiation ) THEN
+      BLOCK
+        INTEGER, ALLOCATABLE :: Inds(:)
+        INTEGER :: cnt
+
+        CALL Info('MakeListMatrix','Adding radiation matrix',Level=14)      
+        DO i = Mesh % NumberOfBulkElements+1, &
+            Mesh % NumberOfBulkElements + Mesh % NumberOfBoundaryElements
+          
+          Element => Mesh % Elements(i)
+          IF ( .NOT. ASSOCIATED(Element % BoundaryInfo % GebhardtFactors) ) CYCLE
+
+          DO j=1,Element % TYPE % NumberOfNodes
+            IF( DGSolver ) THEN
+              k1 = Reorder(Element % DGIndexes(j))
+            ELSE
+              k1 = Reorder(Element % NodeIndexes(j))
+            END IF
+
+            NumberOfFactors = Element % BoundaryInfo % &
+                GebhardtFactors % NumberOfImplicitFactors
+
+            IF (.NOT.ALLOCATED(inds)) THEN
+              ALLOCATE(inds(4*NumberOfFactors))
+            ELSE IF(SIZE(inds)<4*NumberOfFactors) THEN
+              DEALLOCATE(inds)
+              ALLOCATE(inds(4*NumberOfFactors))
+            END IF
+
+            cnt = 0
+            DO n=1,NumberOfFactors
+
+              Elm => Mesh % Elements( Element % BoundaryInfo % &
+                  GebhardtFactors % Elements(n) )
+
+              DO k=1,Elm % TYPE % NumberOfNodes
+                cnt = cnt + 1
+                IF( DGSolver ) THEN
+                  inds(cnt) = Reorder(Elm % DGIndexes(k))
+               ELSE
+                  inds(cnt) = Reorder(Elm % NodeIndexes(k))
+                END IF
+              END DO
+            END DO
+            CALL Sort(cnt,inds)
+            CALL List_AddMatrixIndexes(List,k1,cnt,inds)
+          END DO
+        END DO
+      END BLOCK
+      CALL Info('MakeListMatrix','Done Adding radiation matrix',Level=14)
+    END IF
+
+    
     ! If this is not a GD solver then create permutation considering 
     ! nodal, edge, face and bubble dofs. 
     !-------------------------------------------------------------------
@@ -664,40 +742,8 @@ CONTAINS
       END DO
 
       IF ( ALLOCATED( Indexes ) ) DEALLOCATE( Indexes )
-!
-!     Diffuse gray radiation condition:
-!     ---------------------------------
-      Radiation = ListGetLogical( Solver % Values, 'Radiation Solver', Found )
-      IF ( .NOT. Found .AND. PRESENT(Equation) ) &
-        Radiation = Radiation .OR. (Equation == 'heat equation')
 
-      IF ( Radiation ) THEN
-        DO i = Mesh % NumberOfBulkElements+1, &
-          Mesh % NumberOfBulkElements + Mesh % NumberOfBoundaryElements
-
-          Element => Mesh % Elements(i)
-          IF ( ASSOCIATED(Element % BoundaryInfo % GebhardtFactors) ) THEN
-             DO j=1,Element % TYPE % NumberOfNodes
-                k1 = Reorder(Element % NodeIndexes(j))
-
-                NumberOfFactors = Element % BoundaryInfo % &
-                  GebhardtFactors % NumberOfImplicitFactors
-
-                DO n=1,NumberOfFactors
-
-                  Elm => Mesh % Elements( Element % BoundaryInfo % &
-                              GebhardtFactors % Elements(n) )
-
-                  DO k=1,Elm % TYPE % NumberOfNodes
-                     k2 = Reorder( Elm % NodeIndexes(k) )
-                     Lptr => List_GetMatrixIndex( List,k1,k2 )
-                  END DO
-                END DO
-             END DO
-          END IF
-        END DO
-      END IF
-
+      
       DO i=Mesh % NumberOfBulkElements+1, Mesh % NumberOfBulkElements+ &
                      Mesh % NumberOfBoundaryElements
         IF ( Mesh % Elements(i) % TYPE % ElementCode <  102 .OR. &
@@ -1113,6 +1159,7 @@ CONTAINS
         Radiation = Radiation .OR. (Equation == 'heat equation')
 
       IF ( Radiation ) THEN
+        CALL Info('MakeListMatrixArray','Adding radiation matrix',Level=14)
         DO i = Mesh % NumberOfBulkElements+1, &
           Mesh % NumberOfBulkElements + Mesh % NumberOfBoundaryElements
 
@@ -1137,6 +1184,7 @@ CONTAINS
              END DO
           END IF
         END DO
+        CALL Info('MakeListMatrixArray','Done Adding radiation matrix',Level=14)
       END IF
 
       ! TODO: Add multithreading
@@ -1279,7 +1327,6 @@ CONTAINS
         DO l=1,DOFs
           j = Reorder( InvInitialReorder(i) )
           k1 = DOFs * (j-1) + l
-          
           Rows(k1+1) = Dofs * List(i) % Degree
         END DO
       END DO
@@ -1310,6 +1357,17 @@ CONTAINS
       END DO
       !$OMP END PARALLEL DO      
     ELSE
+      Rows(1) = 1
+      DO i=1,n       
+        DO l=1,DOFs
+          k1 = DOFs * (i-1) + l
+          Rows(k1+1) = Dofs * List(i) % Degree
+        END DO
+      END DO
+      DO i=1,Dofs*n
+        Rows(i+1) = Rows(i) + Rows(i+1)
+      END DO
+
       ! If there is no renumbering then the reordering is one-to-one mapping
       !$OMP PARALLEL DO SHARED(Rows, Cols, List, n, DOFs) &
       !$OMP PRIVATE(CList, l, j, k1, k2, k, m) &
@@ -1331,8 +1389,6 @@ CONTAINS
             END DO
             CList => Clist % Next
           END DO
-          
-          Rows(k1+1) = k2+1
         END DO
       END DO
       !$OMP END PARALLEL DO      
@@ -1374,7 +1430,7 @@ CONTAINS
      INTEGER i,j,k,l,k1,t,n, p,m, minEdgeDOFs, maxEdgeDOFs, &
            minFaceDOFs, maxFaceDOFs, BDOFs, cols, istat
      INTEGER, POINTER :: Ivals(:)
-     INTEGER, ALLOCATABLE :: InvInitialReorder(:)
+     INTEGER, ALLOCATABLE, SAVE :: InvInitialReorder(:)
      INTEGER :: nthr
      LOGICAL :: UseThreads
      LOGICAL, ALLOCATABLE :: ConstrainedNode(:)
@@ -1392,6 +1448,10 @@ CONTAINS
      IF( OptimizeBW ) THEN
        IF( ListGetLogical( Solver % Values,'DG Reduced Basis',Found ) ) THEN
          CALL Info('CreateMatrix','Suppressing bandwidth optimization for discontinuous bodies',Level=8)
+         OptimizeBW = .FALSE.
+       END IF
+       IF( ListGetLogical( Solver % Values,'Apply Conforming BCs',Found ) ) THEN
+         CALL Info('CreateMatrix','Suppressing bandwidth optimization for conforming bcs',Level=8)
          OptimizeBW = .FALSE.
        END IF
      END IF
@@ -1462,6 +1522,7 @@ CONTAINS
        CALL Info('CreateMatrix','creating initial permutation',Level=14)
        k = InitialPermutation( Perm,Model,Solver,Mesh,Eq,DG,GB )
        IF ( k <= 0 ) THEN
+         IF(ALLOCATED(InvInitialReorder)) DEALLOCATE(InvInitialReorder)
          RETURN
        END IF
      ELSE
@@ -1518,7 +1579,10 @@ CONTAINS
 
      ! check if matrix structures really need to be created:
      ! -----------------------------------------------------
-     IF ( ListGetLogical( Solver % Values, 'No matrix',GotIt)) RETURN
+     IF ( ListGetLogical( Solver % Values, 'No matrix',GotIt)) THEN
+       IF(ALLOCATED(InvInitialReorder)) DEALLOCATE(InvInitialReorder)
+       RETURN
+     END IF
 
      !------------------------------------------------------------------------------
      ! Note that Model % RowNonZeros is not used anymore!!!!
@@ -1531,7 +1595,7 @@ CONTAINS
      !       CALL Fatal('CreateMatrix','Allocation error for RowNonZeros of size: '//TRIM(I2S(k)))
      !     END IF
      !     Model % RowNonzeros=0
-    
+
      IF (UseThreads) THEN
        CALL Info('CreateMatrix','Creating threaded list matrix array for equation',Level=14)
        IF ( PRESENT(Equation) ) THEN
@@ -1552,8 +1616,8 @@ CONTAINS
        !------------------------------------------------------------------------------
        CALL Info('CreateMatrix','Initializing list matrix array for equation',Level=14)
        IF ( MatrixFormat == MATRIX_CRS) THEN
-         Matrix => CRS_CreateMatrix( DOFs*k, &
-             Model % TotalMatrixElements,Model % RowNonzeros,DOFs,Perm,.TRUE.,SetRows = .FALSE. )
+         Matrix => CRS_CreateMatrix( DOFs*k, Model % TotalMatrixElements, Ndeg=DOFs, &
+             Reorder=Perm, AllocValues=.TRUE., SetRows = .FALSE.)
          Matrix % FORMAT = MatrixFormat
          IF( OptimizeBW ) THEN
            CALL InitializeMatrix( Matrix, k, ListMatrixArray % Rows, &
@@ -1570,7 +1634,7 @@ CONTAINS
        CALL ListMatrixArray_Free( ListMatrixArray )       
      ELSE
        NULLIFY( ListMatrix )
-       CALL Info('CreateMatrix','Creating list matrix for equation',Level=14)
+       CALL Info('CreateMatrix','Creating list matrix for equation: '//TRIM(Eq),Level=14)
        IF ( PRESENT(Equation) ) THEN
          CALL MakeListMatrix( Model, Solver, Mesh, ListMatrix, Perm, k, Eq, DG, GB,&
                NodalDofsOnly, ProjectorDofs, CalcNonZeros = .FALSE.)
@@ -1590,8 +1654,8 @@ CONTAINS
        CALL Info('CreateMatrix','Initializing list matrix for equation',Level=14)
        SELECT CASE( MatrixFormat )
        CASE( MATRIX_CRS )
-         Matrix => CRS_CreateMatrix( DOFs*k, &
-             Model % TotalMatrixElements,Model % RowNonzeros,DOFs, Perm,.TRUE., SetRows = .FALSE.)
+         Matrix => CRS_CreateMatrix( DOFs*k, Model % TotalMatrixElements, Ndeg=DOFs, &
+             Reorder=Perm, AllocValues=.TRUE., SetRows = .FALSE.)
          Matrix % FORMAT = MatrixFormat
          IF( OptimizeBW ) THEN
            CALL InitializeMatrix( Matrix, k, ListMatrix, &
@@ -1718,7 +1782,7 @@ CONTAINS
      END IF
 
 !     DEALLOCATE( Model % RowNonZeros )
-     IF( OptimizeBW ) DEALLOCATE( InvInitialReorder )
+     IF( ALLOCATED(InvInitialReorder) ) DEALLOCATE( InvInitialReorder )
 !------------------------------------------------------------------------------
    END FUNCTION CreateMatrix
 !------------------------------------------------------------------------------
@@ -1768,6 +1832,61 @@ CONTAINS
 
 !------------------------------------------------------------------------------
    END FUNCTION CreateOdeMatrix
+!------------------------------------------------------------------------------
+
+
+!------------------------------------------------------------------------------
+   FUNCTION CreateDiagMatrix( Model, Solver, Dofs, TimeOrder ) RESULT(Matrix)
+!------------------------------------------------------------------------------
+     TYPE(Model_t) :: Model
+     TYPE(Solver_t), TARGET :: Solver
+     INTEGER :: DOFs
+     TYPE(Matrix_t), POINTER :: Matrix
+     INTEGER, OPTIONAL :: TimeOrder
+!------------------------------------------------------------------------------
+     LOGICAL :: Found
+     INTEGER i,j,k
+!------------------------------------------------------------------------------
+
+     Matrix => NULL()
+
+     !IF ( ListGetLogical( Solver % Values, 'No matrix',Found)) RETURN
+     
+     ! Create a list matrix that allows for unspecified entries in the matrix 
+     ! structure to be introduced.
+     Matrix => AllocateMatrix()
+     Matrix % FORMAT = MATRIX_LIST
+     
+     ! Initialize matrix indices
+     DO i = 1, Dofs
+       CALL List_AddMatrixIndex(Matrix % ListMatrix, i, i) 
+     END DO
+
+     CALL List_ToCRSMatrix(Matrix)
+     CALL CRS_SortMatrix(Matrix,.TRUE.)
+     
+     CALL Info('CreateOdeMatrix','Number of rows in diag matrix: '//&
+         TRIM(I2S(Matrix % NumberOfRows)), Level=9)
+
+     IF( PRESENT( TimeOrder ) ) THEN
+       IF( TimeOrder >= 1 ) THEN
+         ALLOCATE( Matrix % MassValues( SIZE( Matrix % Values ) ) )
+         Matrix % MassValues = 0.0_dp
+       END IF
+       IF( TimeOrder >= 2 ) THEN
+         ALLOCATE( Matrix % DampValues( SIZE( Matrix % Values ) ) )
+         Matrix % DampValues = 0.0_dp
+       END IF
+     END IF
+     
+     Matrix % Solver => Solver
+     Matrix % DGMatrix = .FALSE.
+     Matrix % Subband = 1
+     Matrix % COMPLEX = .FALSE.
+     ! Matrix % FORMAT  = MatrixFormat
+
+!------------------------------------------------------------------------------
+   END FUNCTION CreateDiagMatrix
 !------------------------------------------------------------------------------
 
 
@@ -1862,7 +1981,8 @@ CONTAINS
 !------------------------------------------------------------------------------
   SUBROUTINE TangentDirections( Normal,Tangent1,Tangent2 )
 !------------------------------------------------------------------------------
-   REAL(KIND=dp) :: Normal(3),Tangent1(3),Tangent2(3)
+   REAL(KIND=dp) :: Normal(3),Tangent1(3)
+   REAL(KIND=dp), OPTIONAL :: Tangent2(3)
 !------------------------------------------------------------------------------
    REAL(KIND=dp) :: n1,n2,n3
 !------------------------------------------------------------------------------
@@ -1870,21 +1990,30 @@ CONTAINS
    n2 = ABS(Normal(2))
    n3 = ABS(Normal(3))
 
-   IF ( n1 <= n3 .AND. n2 <= n3 ) THEN
-     Tangent1(1) =  0.0_dp
-     Tangent1(2) = -Normal(3)
-     Tangent1(3) =  Normal(2)
-   ELSE
-     Tangent1(1) = -Normal(2)
-     Tangent1(2) =  Normal(1)
-     Tangent1(3) =  0.0_dp
-   END IF
+   IF( PRESENT( Tangent2 ) ) THEN   
+     IF ( n1 <= n3 .AND. n2 <= n3 ) THEN
+       Tangent1(1) =  0.0_dp
+       Tangent1(2) = -Normal(3)
+       Tangent1(3) =  Normal(2)
+     ELSE
+       Tangent1(1) = -Normal(2)
+       Tangent1(2) =  Normal(1)
+       Tangent1(3) =  0.0_dp
+     END IF
 
-   Tangent1 = Tangent1 / SQRT(SUM(Tangent1**2))
-   Tangent2(1) = Normal(2)*Tangent1(3) - Normal(3)*Tangent1(2)
-   Tangent2(2) = Normal(3)*Tangent1(1) - Normal(1)*Tangent1(3)
-   Tangent2(3) = Normal(1)*Tangent1(2) - Normal(2)*Tangent1(1)
-   Tangent2 = Tangent2 / SQRT(SUM(Tangent2**2))
+     Tangent1 = Tangent1 / SQRT(SUM(Tangent1**2))
+     Tangent2(1) = Normal(2)*Tangent1(3) - Normal(3)*Tangent1(2)
+     Tangent2(2) = Normal(3)*Tangent1(1) - Normal(1)*Tangent1(3)
+     Tangent2(3) = Normal(1)*Tangent1(2) - Normal(2)*Tangent1(1)
+     Tangent2 = Tangent2 / SQRT(SUM(Tangent2**2))
+   ELSE
+     ! This is a 2D tangent only
+     Tangent1(1) = Normal(2)
+     Tangent1(2) = -Normal(1)
+     Tangent1(3) = 0.0_dp
+     Tangent1 = Tangent1 / SQRT(SUM(Tangent1**2))
+   END IF
+     
 !------------------------------------------------------------------------------
  END SUBROUTINE TangentDirections
 !------------------------------------------------------------------------------
@@ -2641,6 +2770,132 @@ CONTAINS
    END FUNCTION ElementArea
 !------------------------------------------------------------------------------
 
+
+   !------------------------------------------------------------------------------
+   !> If element has two of the same indexes regard the element as degenerate.
+   !------------------------------------------------------------------------------
+   FUNCTION DegenerateElement( Element ) RESULT ( Stat ) 
+     TYPE(Element_t), POINTER :: Element
+     LOGICAL Stat
+
+     INTEGER :: i,n
+     INTEGER, POINTER :: Indexes(:)
+     
+     Stat = .FALSE.
+
+     n = Element % TYPE % NumberOfNodes
+     Indexes => Element % NodeIndexes
+     
+     DO i = 1, n
+       IF( ANY( Indexes(i+1:n) == Indexes(i) ) ) THEN
+         Stat = .TRUE.           
+         EXIT
+       END IF
+     END DO
+     
+   END FUNCTION DegenerateElement
+
+   !------------------------------------------------------------------------------
+   !> Return the aspect ratio of an element 
+   !------------------------------------------------------------------------------
+   FUNCTION ElementAspectRatio(Model, Element ) RESULT ( AspectRatio ) 
+     IMPLICIT NONE
+     TYPE(Model_t) Model
+     TYPE(Element_t) :: Element
+     REAL(KIND=dp) :: AspectRatio
+     REAL(KIND=dp) :: CharLen(2)
+
+     CharLen = ElementCharacteristicLengths(Model, Element)
+     IF (CharLen(1) .LE. 0) THEN
+       AspectRatio = HUGE(AspectRatio)
+     ELSE
+       AspectRatio = CharLen(2)/CharLen(1)
+     END IF
+   END FUNCTION ElementAspectRatio
+
+   !------------------------------------------------------------------------------
+   !> Return the characteristic lengths of an element 
+   !------------------------------------------------------------------------------
+   FUNCTION ElementCharacteristicLengths(Model, Element ) RESULT ( Charlengths ) 
+     IMPLICIT NONE
+     TYPE(Model_t) :: Model
+     TYPE(Element_t) :: Element
+     REAL(KIND=dp) :: Charlengths(2)
+     REAL(KIND=dp) :: Dist
+
+     TYPE(Nodes_t) :: en
+     INTEGER :: i,j,n
+
+     INTEGER :: istat
+     
+     n = Element % TYPE % NumberOfNodes
+
+     ALLOCATE( en % x( n ),   &
+               en % y( n ),   &
+               en % z( n ), STAT=istat )
+
+     IF( istat /= 0 ) THEN
+       CALL Fatal('ElementCharacteristicLengths','Allocation error for ElementNodes')
+     END IF
+
+     en % x(1:n) = Model % Nodes % x(Element % NodeIndexes)
+     en % y(1:n) = Model % Nodes % y(Element % NodeIndexes)
+     en % z(1:n) = Model % Nodes % z(Element % NodeIndexes)
+     
+     Charlengths = 0._dp
+     DO i = 1, n
+       DO j = 1, n
+         IF (i /= j) THEN
+           Dist = SQRT((en % x(i)-en % x(j))**2. + (en % y(i)-en % y(j))**2. + (en % z(i)-en % z(j))**2.)
+           IF (Dist < Charlengths(1)) THEN
+             Charlengths(1) = Dist
+           ELSE IF (Dist > Charlengths(2)) THEN
+             Charlengths(2) = Dist
+           END IF
+         END IF
+       END DO
+     END DO
+     
+   END FUNCTION ElementCharacteristicLengths
+   
+   !------------------------------------------------------------------------------
+   !> Return normal of degenerate Element 
+   !------------------------------------------------------------------------------
+   FUNCTION NormalOfDegenerateElement(Model, Element ) RESULT ( Normal ) 
+     IMPLICIT NONE
+     TYPE(Model_t) :: Model
+     TYPE(Element_t) :: Element
+     REAL(KIND=dp) :: a(3), b(3), c(3), Normal(3)
+
+     TYPE(Nodes_t) :: en
+     INTEGER :: i,n
+
+     INTEGER :: istat
+     
+     n = Element % TYPE % NumberOfNodes
+
+     ALLOCATE( en % x( n ),   &
+               en % y( n ),   &
+               en % z( n ), STAT=istat )
+
+     IF( istat /= 0 ) THEN
+       CALL Fatal('ElementCharacteristicLengths','Allocation error for ElementNodes')
+     END IF
+
+     en % x(1:n) = Model % Nodes % x(Element % NodeIndexes)
+     en % y(1:n) = Model % Nodes % y(Element % NodeIndexes)
+     en % z(1:n) = Model % Nodes % z(Element % NodeIndexes)
+
+     a = (/ en % x(1), en % y(1), en % z(1) /)
+     b = (/ en % x(2), en % y(2), en % z(2) /)
+     c = (/ en % x(n), en % y(n), en % z(n) /)
+
+     Normal = crossproduct(a-b, a-c)
+
+     Normal = Normal / SQRT(SUM(c**2))
+     
+   END FUNCTION NormalOfDegenerateElement
+ 
 END MODULE ElementUtils
 
 !> \} ElmerLib

@@ -184,7 +184,7 @@ CONTAINS
     LOGICAL :: Internal, NullEdges
     LOGICAL :: ComponentwiseStopC, NormwiseStopC, RowEquilibration
     LOGICAL :: Condition,GotIt, Refactorize,Found,GotDiagFactor,Robust
-    LOGICAL :: ComplexSystem, PseudoComplexSystem
+    LOGICAL :: ComplexSystem, PseudoComplexSystem, DoFatal
     
     REAL(KIND=dp) :: ILUT_TOL, DiagFactor
 
@@ -955,6 +955,7 @@ CONTAINS
       DEALLOCATE(bC,xC)
     ELSE
       CALL Info('IterSolver','Calling real valued iterative solver',Level=32)
+
       CALL IterCall( iterProc, x, b, ipar, dpar, work, &
           mvProc, pcondProc, pcondrProc, dotProc, normProc, stopcProc )
     ENDIF
@@ -979,12 +980,20 @@ CONTAINS
       CALL Info('IterSolve','Returned return code: '//TRIM(I2S(HUTI_INFO)),Level=15)
       IF( HUTI_INFO == HUTI_DIVERGENCE ) THEN
         CALL NumericalError( 'IterSolve', 'System diverged over maximum tolerance.')
-      ELSE IF( HUTI_INFO == HUTI_MAXITER ) THEN
-        CALL NumericalError( 'IterSolve', 'Too many iterations was needed.')        
+      ELSE IF( HUTI_INFO == HUTI_MAXITER ) THEN                
+        DoFatal = ListGetLogical( Params,'Linear System Abort Not Converged',Found )
+        IF(.NOT. Found ) DoFatal = .TRUE.
+        IF( DoFatal ) THEN
+          CALL NumericalError('IterSolve','Too many iterations were needed.')
+        ELSE
+          CALL Info('IterSolve','Linear iteration did not converge to tolerance',Level=6)
+        END IF
+      ELSE IF( HUTI_INFO == HUTI_HALTED ) THEN
+        CALL Warn('IterSolve','Iteration halted due to problem in algorithm, trying to continue')
       END IF
       IF( ASSOCIATED( Solver % Variable ) ) THEN
         Solver % Variable % LinConverged = 0
-      END IF      
+      END IF
     END IF
 !------------------------------------------------------------------------------
 #ifdef USE_ISO_C_BINDINGS
@@ -1006,12 +1015,12 @@ CONTAINS
 !> convergence/numerical issues, based on a flag in the SIF. Default
 !> behaviour terminates execution.
 !-----------------------------------------------------------------------
-   SUBROUTINE NumericalError( Caller, String, Fatal )
+   SUBROUTINE NumericalError( Caller, String, IsFatal )
 !-----------------------------------------------------------------------
      CHARACTER(LEN=*) :: Caller, String
-     LOGICAL, OPTIONAL :: Fatal
+     LOGICAL, OPTIONAL :: IsFatal
 !-----------------------------------------------------------------------
-     LOGICAL :: GlobalNumFatal, SolverNumFatal, IsFatal, Found
+     LOGICAL :: DoFatal, Found
 !-----------------------------------------------------------------------
 
      !Fatality logic:
@@ -1020,36 +1029,19 @@ CONTAINS
      ! 3) Respect global abort flag if present
      ! 4) Otherwise fatal (backwards compatibility)
 
-     IF(PRESENT(Fatal)) THEN
-       IsFatal = Fatal
+     IF(PRESENT(IsFatal)) THEN
+       DoFatal = IsFatal
      ELSE
-       SolverNumFatal = ListGetLogical( CurrentModel % Solver % Values, &
-            'Linear System Abort Not Converged', Found)
-       IF(Found) THEN
-         IsFatal = SolverNumFatal
-       ELSE
-         GlobalNumFatal = ListGetLogical(CurrentModel % Simulation,&
-            'Global Abort Not Converged',Found)
-         IF(Found) THEN
-           IsFatal = GlobalNumFatal
-         ELSE
-           IsFatal = .TRUE.
-         END IF
-       END IF
+       DoFatal = ListGetLogical(CurrentModel % Simulation,&
+           'Global Abort Not Converged',Found)
+       IF(.NOT. Found ) DoFatal = .TRUE.
      END IF
 
-     IF ( OutputLevelMask(0) ) THEN
-       IF(IsFatal) THEN
-         WRITE( *, '(A,A,A,A)', ADVANCE='YES' ) &
-              'NUMERICAL ERROR:: ', TRIM(Caller), ': ', TRIM(String)
-       ELSE
-         WRITE( *, '(A,A,A,A)', ADVANCE='YES' ) &
-              'NUMERICAL WARNING:: ', TRIM(Caller), ': ', TRIM(String)
-       END IF
-       CALL FLUSH(6)
+     IF(DoFatal) THEN
+       CALL Fatal(Caller,'Numerical Error: '//TRIM(String))
+     ELSE
+       CALL Warn(Caller,'Numerical Error: '//TRIM(String))
      END IF
-
-     IF(IsFatal) STOP
 
 !-----------------------------------------------------------------------
    END SUBROUTINE NumericalError

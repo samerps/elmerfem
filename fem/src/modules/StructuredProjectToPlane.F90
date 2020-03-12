@@ -23,7 +23,7 @@
 !
 !/******************************************************************************
 ! *
-! *  Authors: Peter R�back
+! *  Authors: Peter Råback
 ! *  Email:   Peter.Raback@csc.fi
 ! *  Web:     http://www.csc.fi/elmer
 ! *  Address: CSC - IT Center for Science Ltd.
@@ -57,15 +57,19 @@ SUBROUTINE StructuredProjectToPlane_init( Model,Solver,dt,TransientSimulation )
   INTEGER :: NormInd
   LOGICAL :: GotIt
 
+  Params => GetSolverParams()
+  
   ! If we want to show a pseudonorm add a variable for which the norm
   ! is associated with.
-  NormInd = ListGetInteger( Solver % Values,'Show Norm Index',GotIt)
+  NormInd = ListGetInteger( Params,'Show Norm Index',GotIt)
   IF( NormInd > 0 ) THEN
-    IF( .NOT. ListCheckPresent( Solver % Values,'Variable') ) THEN
-      CALL ListAddString( Solver % Values,'Variable','-nooutput -global savescalars_var')
+    IF( .NOT. ListCheckPresent( Params,'Variable') ) THEN
+      CALL ListAddString( Params,'Variable','-nooutput -global savescalars_var')
     END IF
   END IF
 
+  CALL ListAddNewLogical( Params,'No Matrix',.TRUE.)
+  
 END SUBROUTINE StructuredProjectToPlane_init
 
 
@@ -320,7 +324,7 @@ SUBROUTINE StructuredProjectToPlane( Model,Solver,dt,Transient )
       WRITE (TargetName,'(A,A)') TRIM(Oper0)//' '//TRIM(VarName)
     END IF
 
-    IF( Oper == 'height' .OR. Oper == 'depth' .OR. Oper == 'index' .OR. Oper == 'distance' ) THEN
+    IF( Oper == 'height' .OR. Oper == 'depth' .OR. Oper == 'index' .OR. Oper == 'distance') THEN
       ReducedDimensional = .FALSE.
     ELSE
       ReducedDimensional = .TRUE.
@@ -708,9 +712,8 @@ SUBROUTINE StructuredProjectToPlane( Model,Solver,dt,Transient )
           TopField(TopPerm(itop)) = TopField(TopPerm(itop)) + dx 
         END DO
 
-      ! Following three operators may have full dimensional results
-      !--------------------------------------------------------------      
-  
+      ! Following four operators may have full dimensional results
+      !--------------------------------------------------------------              
       CASE ('index')
         FieldOut = 0.0_dp
         DO i=1,nnodes

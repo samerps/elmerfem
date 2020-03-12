@@ -151,7 +151,7 @@ SUBROUTINE CircuitsAndDynamics( Model,Solver,dt,TransientSimulation )
     ! Create CRS matrix strucures for the circuit equations:
     ! ------------------------------------------------------
     CALL Circuits_MatrixInit()
-    ALLOCATE(ip(Model%Circuit_tot_n))
+    ALLOCATE(ip(Model % Circuit_tot_n))
   END IF
   
   IF (Tstep /= GetTimestep()) THEN
@@ -170,7 +170,7 @@ SUBROUTINE CircuitsAndDynamics( Model,Solver,dt,TransientSimulation )
   n_Circuits => Model%n_Circuits
   CM=>Model%CircuitMatrix
   
-  ! Initialialize Circuit matrix:
+  ! Initialize Circuit matrix:
   ! -----------------------------
   IF(.NOT.ASSOCIATED(CM)) RETURN
 
@@ -299,7 +299,7 @@ SUBROUTINE CircuitsAndDynamics( Model,Solver,dt,TransientSimulation )
       vvarId = Comp % vvar % ValueId + nm
       IvarId = Comp % ivar % ValueId + nm
 
-      CompParams => CurrentModel % Components(CompInd) % Values
+      CompParams => CurrentModel % Components(Comp % ComponentId) % Values
       IF (.NOT. ASSOCIATED(CompParams)) CALL Fatal ('AddComponentEquationsAndCouplings', 'Component parameters not found')
       IF (Comp % CoilType == 'stranded') THEN
         Comp % Resistance = GetConstReal(CompParams, 'Resistance', Found)
@@ -501,8 +501,8 @@ SUBROUTINE CircuitsAndDynamics( Model,Solver,dt,TransientSimulation )
           IF ( TransientSimulation ) THEN 
             IF (dim == 2) value = Comp % N_j * IP % s(t)*detJ*Basis(j)*circ_eq_coeff/dt*w(3)
             IF (dim == 3) value = Comp % N_j * IP % s(t)*detJ*SUM(WBasis(j,:)*w)/dt
- !          localL = value
-!          Comp % Inductance = Comp % Inductance + localL
+!           localL = value
+!           Comp % Inductance = Comp % Inductance + localL
 
             CALL AddToMatrixElement(CM, VvarId, PS(Indexes(q)), tscl * value)
             CM % RHS(vvarid) = CM % RHS(vvarid) + pPOT(q) * value
@@ -763,7 +763,7 @@ SUBROUTINE CircuitsAndDynamics( Model,Solver,dt,TransientSimulation )
       ! R = (1/sigma * js,js):
       ! ----------------------
       IF (dim == 2) localR = Comp % N_j **2 * IP % s(t)*detJ/C(1,1)*circ_eq_coeff
-      IF (dim == 3) localR = Comp % N_j **2 * IP % s(t)*detJ*SUM(gradv*MATMUL(C,gradv))
+      IF (dim == 3) localR = Comp % N_j **2 * IP % s(t)*detJ/C(3,3)
       Comp % Resistance = Comp % Resistance + localR
 
       DO vpolordtest=0,vpolord_tot ! V'(alpha)
@@ -1016,7 +1016,7 @@ SUBROUTINE CircuitsAndDynamicsHarmonic( Model,Solver,dt,TransientSimulation )
   n_Circuits => Model%n_Circuits
   CM=>Model%CircuitMatrix
   
-  ! Initialialize Circuit matrix:
+  ! Initialize Circuit matrix:
   ! -----------------------------
   IF(.NOT.ASSOCIATED(CM)) RETURN
 
@@ -1160,7 +1160,7 @@ SUBROUTINE CircuitsAndDynamicsHarmonic( Model,Solver,dt,TransientSimulation )
       vvarId = Comp % vvar % ValueId + nm
       IvarId = Comp % ivar % ValueId + nm
 
-      CompParams => CurrentModel % Components(CompInd) % Values
+      CompParams => CurrentModel % Components(Comp % ComponentId) % Values
       IF (.NOT. ASSOCIATED(CompParams)) CALL Fatal ('AddComponentEquationsAndCouplings', 'Component parameters not found')
       IF (Comp % CoilType == 'stranded') THEN
         Comp % Resistance = GetConstReal(CompParams, 'Resistance', Found)
@@ -1382,6 +1382,7 @@ SUBROUTINE CircuitsAndDynamicsHarmonic( Model,Solver,dt,TransientSimulation )
         ! R = (1/sigma * js,js):
         ! ----------------------
         localR = Comp % N_j **2 * IP % s(t)*detJ*SUM(w*w)/localC*circ_eq_coeff
+
         Comp % Resistance = Comp % Resistance + localR
         
         CALL AddToCmplxMatrixElement(CM, VvarId, IvarId, &
@@ -1647,7 +1648,8 @@ SUBROUTINE CircuitsAndDynamicsHarmonic( Model,Solver,dt,TransientSimulation )
       ! R = (1/sigma * js,js):
       ! ----------------------
       IF (dim == 2) localR = Comp % N_j **2 * IP % s(t)*detJ/C(1,1)*circ_eq_coeff
-      IF (dim == 3) localR = Comp % N_j **2 * IP % s(t)*detJ*SUM(gradv*MATMUL(C,gradv))
+      IF (dim == 3) localR = Comp % N_j **2 * IP % s(t)*detJ/C(3,3)
+
       Comp % Resistance = Comp % Resistance + localR
 
       DO vpolordtest=0,vpolord_tot ! V'(alpha)
