@@ -81,6 +81,8 @@ END SUBROUTINE MarchingODESolver_init
 SUBROUTINE MarchingODESolver( Model,Solver,dt,Transient)
 !------------------------------------------------------------------------------
   USE DefUtils
+  USE DetectExtruded
+  
   IMPLICIT NONE
 !------------------------------------------------------------------------------
   TYPE(Solver_t), TARGET :: Solver  !< Linear & nonlinear equation solver options

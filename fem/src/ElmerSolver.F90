@@ -59,6 +59,8 @@
 
      USE Lists
      USE MainUtils
+     USE MortarProjector
+     USE MeshGeneration
      
 !------------------------------------------------------------------------------
      IMPLICIT NONE
@@ -589,7 +591,9 @@ END INTERFACE
        ELSE
          ExtrudedMesh => MeshExtrude(CurrentModel % Meshes, ExtrudeLayers-1)
        END IF
-
+       
+       CALL GeneratePeriodicProjectors( CurrentModel, ExtrudedMesh )    
+       
        ! Make the solvers point to the extruded mesh, not the original mesh
        !-------------------------------------------------------------------
        DO i=1,CurrentModel % NumberOfSolvers

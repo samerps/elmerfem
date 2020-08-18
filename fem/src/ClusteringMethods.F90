@@ -50,7 +50,8 @@ CONTAINS
   SUBROUTINE ChooseClusterNodes(Amat, Solver, Components, EliminateDir, CF)
 
     USE MeshUtils    
-    
+    USE DetectExtruded
+   
     TYPE(Matrix_t), POINTER  :: Amat
     TYPE(solver_t), TARGET :: Solver
     INTEGER :: Components

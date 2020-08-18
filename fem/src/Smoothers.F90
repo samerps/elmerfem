@@ -947,6 +947,7 @@ CONTAINS
 !------------------------------------------------------------------------------
         USE DirectSolve
         USE MeshUtils
+        USE DetectExtruded
 !------------------------------------------------------------------------------
         TYPE(Matrix_t), POINTER :: A, M
         INTEGER :: Rounds

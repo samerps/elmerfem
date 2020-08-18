@@ -46,6 +46,7 @@ MODULE Adaptive
 
   USE GeneralUtils
   USE SolverUtils
+  USE MortarProjector
   USE ModelDescription
   USE LoadMod
 
@@ -894,7 +895,8 @@ CONTAINS
     CALL SystemCommand( MeshCommand )
 
     NewMesh => LoadMesh2( Model, OutPutPath, Path, .FALSE., 1, 0 )
-
+    CALL GeneratePeriodicProjectors( Model, Newmesh ) 
+        
     IF ( Solver % Variable % Name == 'temperature' ) THEN
        Name = ListGetString( Model % Simulation, 'Gebhardt Factors', Found )
        IF ( Found ) THEN

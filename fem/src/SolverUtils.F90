@@ -58,6 +58,7 @@ MODULE SolverUtils
    USE TimeIntegrate
    USE ModelDescription
    USE MeshUtils
+   USE MortarProjector
    USE ParallelUtils
    USE ParallelEigenSolve
    USE ListMatrix

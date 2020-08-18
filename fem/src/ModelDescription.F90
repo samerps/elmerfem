@@ -46,6 +46,7 @@ MODULE ModelDescription
 
     USE LoadMod
     USE MeshUtils
+    USE MortarProjector
     USE ElementDescription
     USE BinIO
     USE Messages
@@ -2260,7 +2261,7 @@ CONTAINS
 !------------------------------------------------------------------------------
     USE MeshPartition
     USE SParIterGlobals
-
+    
     IMPLICIT NONE
 
     CHARACTER(LEN=*) :: ModelName
@@ -2515,10 +2516,11 @@ CONTAINS
         CALL PrepareMesh( Model, Model % Meshes, ParEnv % PEs > 1, Def_Dofs )          
       ELSE
         Model % Meshes => LoadMesh2( Model, MeshDir, MeshName, &
-            BoundariesOnly, numprocs, mype, Def_Dofs )
+            BoundariesOnly, numprocs, mype, Def_Dofs )        
       END IF
       
-
+      CALL GeneratePeriodicProjectors( Model, Model % Meshes )    
+    
       IF(.NOT.ASSOCIATED(Model % Meshes)) THEN
         CALL FreeModel(Model)
         Model => NULL()
@@ -2739,11 +2741,13 @@ CONTAINS
         IF ( Single ) THEN
           Model % Solvers(s) % Mesh => &
               LoadMesh2( Model,MeshDir,MeshName,BoundariesOnly,1,0,def_dofs, s )
+          CALL GeneratePeriodicProjectors( Model, Model % Solvers(s) % Mesh )
         ELSE
           IF ( mype < nprocs ) THEN
             Model % Solvers(s) % Mesh => &
                 LoadMesh2( Model,MeshDir,MeshName,BoundariesOnly,nprocs,mype,Def_Dofs, s )
-          ELSE
+          CALL GeneratePeriodicProjectors( Model, Model % Solvers(s) % Mesh )
+        ELSE
             ! There are more partitions than partitions in mesh, just allocate
             Model % Solvers(s) % Mesh => AllocateMesh()
           END IF

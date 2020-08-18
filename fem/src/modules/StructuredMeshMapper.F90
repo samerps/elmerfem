@@ -67,6 +67,7 @@ SUBROUTINE StructuredMeshMapper( Model,Solver,dt,Transient )
 
   USE CoordinateSystems
   USE MeshUtils
+  USE DetectExtruded
   USE ParallelUtils
   USE DefUtils
 

@@ -46,6 +46,7 @@
 SUBROUTINE OutletCompute_Init( Model,Solver,dt,TransientSimulation )
 
   USE MeshUtils
+  USE MeshGeneration
   USE DefUtils
 
   IMPLICIT NONE
