@@ -92,6 +92,7 @@ SUBROUTINE Flotation( Model,Solver,dt,Transient )
 !------------------------------------------------------------------------------
   USE CoordinateSystems
   USE MeshUtils
+  USE DetectExtruded
   USE DefUtils
 
   IMPLICIT NONE
