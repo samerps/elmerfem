@@ -2128,7 +2128,7 @@ END SUBROUTINE FetiProject
         A % Values = SaveValues
 
         DO j=1,nz
-          CALL SetSymmDirichlet(A,y,FixInds(j),0._dp)
+          CALL CRS_SetSymmDirichlet(A,y,FixInds(j),0._dp)
         END DO
       END IF
     END IF

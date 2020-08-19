@@ -23,7 +23,7 @@
 !
 !/******************************************************************************
 ! *
-! *  Utilities for *Solver - routines
+! *  Utilities for dealing with the linear system (matrix-vector, scaling, loads etc.)
 ! *
 ! ******************************************************************************
 ! *
@@ -45,7 +45,7 @@
 !> \{
 
 
-MODULE ScalingUtils
+MODULE LinsysUtils
 
 #include "../config.h"
 
@@ -1480,7 +1480,5 @@ CONTAINS
 
   END SUBROUTINE CalculateLoads
 
-
-
   
-END MODULE ScalingUtils
+END MODULE LinsysUtils

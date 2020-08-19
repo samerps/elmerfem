@@ -138,11 +138,11 @@
        LocalVelo(:,:), LocalFluidity(:), LocalFlowWidth(:)
             
      INTEGER :: NumberOfBoundaryNodes
-     INTEGER, POINTER :: BoundaryReorder(:)
+!     INTEGER, POINTER :: BoundaryReorder(:)
 
      REAL(KIND=dp) :: Bu, Bv, Bw, RM(3,3)
-     REAL(KIND=dp), POINTER :: BoundaryNormals(:,:), &
-         BoundaryTangent1(:,:), BoundaryTangent2(:,:)
+!     REAL(KIND=dp), POINTER :: BoundaryNormals(:,:), &
+!         BoundaryTangent1(:,:), BoundaryTangent2(:,:)
      CHARACTER(LEN=MAX_NAME_LEN) :: viscosityFile
      REAL(KIND=dp) :: Radius
 
@@ -152,8 +152,7 @@
      REAL(KIND=dp) :: CPUTime, RealTime
 #endif
 !------------------------------------------------------------------------------
-     SAVE NumberOfBoundaryNodes,BoundaryReorder,BoundaryNormals, &
-              BoundaryTangent1, BoundaryTangent2, FabricGrid, viscosityFile
+     SAVE NumberOfBoundaryNodes,FabricGrid, viscosityFile
 
      SAVE TimeForce, Basis, dBasisdx, ddBasisddx
      SAVE LocalMassMatrix, LocalStiffMatrix, LoadVector, &

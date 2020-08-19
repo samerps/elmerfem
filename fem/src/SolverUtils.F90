@@ -59,7 +59,7 @@ MODULE SolverUtils
    USE ModelDescription
    USE MeshUtils
    USE MortarProjector
-   USE ScalingUtils
+   USE LinsysUtils
    USE AssemblyUtils
    USE ParallelUtils
    USE ParallelEigenSolve

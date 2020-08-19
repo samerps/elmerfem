@@ -112,10 +112,10 @@ RECURSIVE SUBROUTINE ComputeDevStress( Model,Solver,dt,TransientSimulation )
        LocalVelo(:,:), LocalViscosity(:)
   
   INTEGER :: NumberOfBoundaryNodes, COMP
-  INTEGER, POINTER :: BoundaryReorder(:)
+!  INTEGER, POINTER :: BoundaryReorder(:)
   
-  REAL(KIND=dp), POINTER :: BoundaryNormals(:,:), &
-       BoundaryTangent1(:,:), BoundaryTangent2(:,:)
+!  REAL(KIND=dp), POINTER :: BoundaryNormals(:,:), &
+!       BoundaryTangent1(:,:), BoundaryTangent2(:,:)
   CHARACTER(LEN=MAX_NAME_LEN) :: FlowSolverName, StressSolverName
   
 #ifdef USE_ISO_C_BINDINGS
@@ -124,8 +124,9 @@ RECURSIVE SUBROUTINE ComputeDevStress( Model,Solver,dt,TransientSimulation )
   REAL(KIND=dp) :: at, at0, CPUTime, RealTime
 #endif
 !------------------------------------------------------------------------------
-  SAVE NumberOfBoundaryNodes, BoundaryReorder, BoundaryNormals, &
-       BoundaryTangent1, BoundaryTangent2
+  SAVE NumberOfBoundaryNodes
+  !, BoundaryReorder, BoundaryNormals, &
+  !     BoundaryTangent1, BoundaryTangent2
   
   SAVE Basis, dBasisdx, ddBasisddx
   SAVE LocalMassMatrix, LocalStiffMatrix, LocalForce, &

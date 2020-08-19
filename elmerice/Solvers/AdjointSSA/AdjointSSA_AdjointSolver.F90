@@ -74,7 +74,7 @@
    TYPE(Matrix_t),POINTER :: InitMat,TransMat,StiffMatrix
    TYPE(ValueList_t),POINTER ::  BC,BF,SolverParams
    TYPE(ValueListEntry_t),POINTER :: NormalTangential,NormalTangentialC
-   character(LEN=MAX_NAME_LEN),SAVE :: NormalTangentialName,NormalTangentialNameb
+   character(LEN=MAX_NAME_LEN),SAVE :: NormalTangentialNameb !,NormalTangentialName
    LOGICAL :: AnyNT
    TYPE(Element_t),POINTER :: Element
    TYPE(Variable_t), POINTER :: Sol
@@ -93,11 +93,11 @@
    LOGICAL :: Conditional,CheckNT
    REAL(KIND=dp),ALLOCATABLE,SAVE :: Condition(:)
 
-   INTEGER, POINTER,SAVE :: BoundaryReorder(:)=> NULL()
-   INTEGER,SAVE :: NormalTangentialNOFNodes
-   REAL(KIND=dp), POINTER :: BoundaryNormals(:,:)=> NULL(), &
-                       BoundaryTangent1(:,:)=> NULL(), &
-                       BoundaryTangent2(:,:)=> NULL()
+!   INTEGER, POINTER,SAVE :: BoundaryReorder(:)=> NULL()
+!   INTEGER,SAVE :: NormalTangentialNOFNodes
+!   REAL(KIND=dp), POINTER :: BoundaryNormals(:,:)=> NULL(), &
+!                       BoundaryTangent1(:,:)=> NULL(), &
+!                       BoundaryTangent2(:,:)=> NULL()
 
    CHARACTER(LEN=MAX_NAME_LEN),SAVE :: SolverName="Adjoint Solver"
    INTEGER, SAVE :: SolverInd

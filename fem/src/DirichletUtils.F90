@@ -54,7 +54,7 @@ MODULE DirichletUtils
   USE AssemblyUtils
   USE ListMatrix
   USE CRSMatrix
-  USE ScalingUtils
+  USE LinsysUtils
   USE ParallelUtils
    
   IMPLICIT NONE
@@ -1540,7 +1540,7 @@ CONTAINS
 
           Coeff = 1.0_dp
           
-          CALL CRS_MoveRow( A, k, k0, Coeff )
+          CALL MoveRow( A, k, k0, Coeff )
           b(k0) = b(k0) + Coeff * b(k)
 
           CALL AddToMatrixElement( A, k, k, 1.0_dp )
@@ -1553,7 +1553,7 @@ CONTAINS
 
             Coeff = 1.0_dp
             
-            CALL CRS_MoveRow( A, k, k0, Coeff )
+            CALL MoveRow( A, k, k0, Coeff )
             b(k0) = b(k0) + Coeff * b(k)
           
             CALL AddToMatrixElement( A, k, k, 1.0_dp )
@@ -1649,10 +1649,10 @@ CONTAINS
             b(k0) = b(k0) + Coeff * b(k)
             IF( m < dim ) THEN
               ! This does not nullify the row
-              CALL CRS_MoveRow( A, k, k0, Coeff, 1.0_dp )
+              CALL MoveRow( A, k, k0, Coeff, 1.0_dp )
             ELSE
               ! Now also nullify the row
-              CALL CRS_MoveRow( A, k, k0, Coeff )
+              CALL MoveRow( A, k, k0, Coeff )
               b(k) = 0.0_dp
             END IF
           END DO

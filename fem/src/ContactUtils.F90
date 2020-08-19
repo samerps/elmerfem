@@ -47,21 +47,9 @@
 MODULE ContactUtils
 
    USE Types
-!   USE LoadMod
-!   USE DirectSolve
-!   USE Multigrid
-!   USE IterSolve
-!   USE ElementUtils
-!   USE ComponentUtils
-!   USE TimeIntegrate
-!   USE ModelDescription
    USE MeshUtils
    USE AssemblyUtils
-   USE ScalingUtils
-!   USE SolverUtils
-!   USE MortarProjector
-!   USE ParallelUtils
-!   USE ParallelEigenSolve
+   USE LinsysUtils
    USE ListMatrix
    USE CRSMatrix
    

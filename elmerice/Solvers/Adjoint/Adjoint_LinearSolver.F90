@@ -96,13 +96,13 @@
 
    ! Var related to Normal-Tangential stuff and Dirchlet BCs
    TYPE(ValueListEntry_t),POINTER :: NormalTangential,NormalTangentialC
-   REAL(KIND=dp), POINTER :: BoundaryNormals(:,:)=> NULL(), &
-                       BoundaryTangent1(:,:)=> NULL(), &
-                       BoundaryTangent2(:,:)=> NULL()
+!   REAL(KIND=dp), POINTER :: BoundaryNormals(:,:)=> NULL(), &
+!                       BoundaryTangent1(:,:)=> NULL(), &
+!                       BoundaryTangent2(:,:)=> NULL()
    REAL(KIND=dp),ALLOCATABLE,SAVE :: Condition(:)
-   INTEGER, POINTER,SAVE :: BoundaryReorder(:)=> NULL()
-   INTEGER,SAVE :: NormalTangentialNOFNodes
-   CHARACTER(LEN=MAX_NAME_LEN),SAVE :: NormalTangentialName,NormalTangentialNameb
+!   INTEGER, POINTER,SAVE :: BoundaryReorder(:)=> NULL()
+!   INTEGER,SAVE :: NormalTangentialNOFNodes
+   CHARACTER(LEN=MAX_NAME_LEN),SAVE :: NormalTangentialNameb !,NormalTangentialName
    LOGICAL :: AnyNT
    LOGICAL :: Conditional,CheckNT
 

@@ -47,6 +47,7 @@ MODULE MainUtils
   Use BlockSolve
   USE IterSolve, ONLY : NumericalError
   USE LoadMod
+  USE AssemblyUtils
 
 !------------------------------------------------------------------------------
   IMPLICIT NONE
