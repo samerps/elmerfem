@@ -1031,6 +1031,19 @@ MODULE Types
     TYPE(Matrix_t), POINTER :: GlobalMatrix
 
     INTEGER :: ELMER_COMM_WORLD = -1
+
+
+    ! Moved here from SolverUtils so we could split the huge solver.
+    ! These could also be put under some structure, e.g. Mesh_t. 
+    CHARACTER(LEN=MAX_NAME_LEN) :: NormalTangentialName
+    INTEGER :: NormalTangentialNOFNodes
+    INTEGER, POINTER :: NTelement(:,:)
+    LOGICAL, POINTER :: NTzeroing_done(:,:)
+    INTEGER, POINTER :: BoundaryReorder(:)
+    REAL(KIND=dp), POINTER :: BoundaryNormals(:,:),  &
+        BoundaryTangent1(:,:), &
+        BoundaryTangent2(:,:)
+
 !------------------------------------------------------------------------------
 END MODULE Types
 !------------------------------------------------------------------------------

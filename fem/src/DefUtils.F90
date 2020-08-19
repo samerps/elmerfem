@@ -40,8 +40,8 @@
 !> \{
 
 !--------------------------------------------------------------------------------
-!>  Module containing utility subroutines with default values for various
-!>  system subroutine arguments. For user defined solvers and subroutines
+!> Module containing utility subroutines with default values for various
+!> system subroutine arguments. For user defined solvers and subroutines
 !> this module should provide all the needed functionality for typical finite
 !> element procedures.  
 !--------------------------------------------------------------------------------
@@ -51,7 +51,10 @@ MODULE DefUtils
 
    USE Adaptive
    USE SolverUtils
-
+   USE ContactUtils
+   USE DirichletUtils
+   USE AssemblyUtils
+   
    IMPLICIT NONE
 
    INTERFACE DefaultUpdateEquations

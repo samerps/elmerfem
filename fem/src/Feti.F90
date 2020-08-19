@@ -46,6 +46,8 @@
 MODULE FetiSolve
 
   USE DefUtils
+  USE DirichletUtils
+
   IMPLICIT NONE
 
   TYPE(ValueList_t), PRIVATE, POINTER :: Params => Null()
@@ -2126,7 +2128,7 @@ END SUBROUTINE FetiProject
         A % Values = SaveValues
 
         DO j=1,nz
-          CALL CRS_SetSymmDirichlet(A,y,FixInds(j),0._dp)
+          CALL SetSymmDirichlet(A,y,FixInds(j),0._dp)
         END DO
       END IF
     END IF

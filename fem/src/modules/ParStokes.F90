@@ -138,7 +138,7 @@ SUBROUTINE StokesSolver( Model,Solver,dt,TransientSimulation )
        Velocity(:,:), LoadVector(:,:), SlipCoeff(:,:), ExtPressure(:)
 
   TYPE(Nodes_t) :: ElementNodes
-  CHARACTER(LEN=MAX_NAME_LEN) :: NormalTangentialName
+!  CHARACTER(LEN=MAX_NAME_LEN) :: NormalTangentialName
 
   SAVE STIFF, LOAD, FORCE, rho, mu, Velocity, AllocationsDone, ElementNodes, &
       LoadVector, SlipCoeff, ExtPressure

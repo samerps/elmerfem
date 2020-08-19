@@ -28,10 +28,11 @@ SET(solverlib_SOURCES AddrFunc.F90 NavierStokes.F90 NavierStokesGeneral.F90
   IterativeMethods.F90 TimeIntegrate.F90 Types.F90 SolveBand.F90
   ElementUtils.F90 Radiation.F90 fft.c Load.c Differentials.F90
   FreeSurface.F90 Maxwell.F90 MaxwellAxiS.F90 MaxwellGeneral.F90
-  Walls.F90 SolverUtils.F90 SolveSBand.F90 CPUTime.c Interpolation.F90
+  Walls.F90 SolverUtils.F90 ContactUtils.F90 DirichletUtils.F90
+  SolveSBand.F90 CPUTime.c Interpolation.F90
   MainUtils.F90 Adaptive.F90 EigenSolve.F90 HashTable.F90
   MeshUtils.F90 MeshGeneration.F90 DetectExtruded.F90 MortarProjector.F90
-  SParIterGlobals.F90 SParIterComm.F90
+  ScalingUtils.F90 AssemblyUtils.F90 SParIterGlobals.F90 SParIterComm.F90
   SParIterPrecond.F90 SParIterSolver.F90 Messages.F90 Multigrid.F90
   Smoothers.F90 ClusteringMethods.F90 ParallelUtils.F90
   ParallelEigenSolve.F90 solve_cmplx.F90 solve_real.F90 MGPrec.F90
