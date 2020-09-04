@@ -1912,8 +1912,8 @@ SUBROUTINE PermafrostHeatTransfer( Model,Solver,dt,TransientSimulation )
   ! Nonlinear iteration loop:
   !--------------------------
   DO iter=1,maxiter
-    WRITE(Message,*) "Nonlinear iteration ", iter, " out of ", maxiter
-    CALL INFO( SolverName, Message, Level=3)
+    CALL INFO( SolverName, "Nonlinear iteration "&
+        //TRIM(I2S(iter))//" out of "//TRIM(I2S(maxiter)),Level=3)
     
     ! System assembly:
     !----------------

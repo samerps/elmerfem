@@ -2238,8 +2238,8 @@ SUBROUTINE CRS_RowSumInfo( A, Values )
     LOGICAL, ALLOCATABLE :: ActiveNodes(:), RowFound(:)
 
     TYPE(Matrix_t), POINTER :: im
-
-INCLUDE "mpif.h"
+    
+    INCLUDE "mpif.h"
 
     CALL Info('CRS_FCTLowOrder','Making low order FCT correction to matrix',Level=5)
 
@@ -2345,7 +2345,7 @@ INCLUDE "mpif.h"
 
     ! Create a lumped mass matrix by computing the rowsums of the 
     ! initial mass matrix.
-    CALL Info('CRS_FCTLowOder','Creating lumped mass matrix',Level=10)
+    CALL Info('CRS_FCTLowOrder','Creating lumped mass matrix',Level=10)
     IF(.NOT. ASSOCIATED(A % MassValuesLumped)) THEN         
       ALLOCATE(A % MassValuesLumped(n))
     END IF
