@@ -3063,8 +3063,8 @@ SUBROUTINE CRS_RowSumInfo( A, Values )
     TYPE(Matrix_t), POINTER :: A1
 !------------------------------------------------------------------------------
     WRITE(Message,'(a,i1,a)')  &
-         'ILU(',ILUn,') (Real), Starting Factorization:'
-    CALL Info( 'CRS_IncompleteLU', Message, Level = 5 )
+         'ILU(',ILUn,') (Real), Performing Factorization:'
+    CALL Info( 'CRS_IncompleteLU', Message, Level = 6 )
     st = CPUTime()
 
     N = A % NumberOfRows
@@ -3100,7 +3100,7 @@ SUBROUTINE CRS_RowSumInfo( A, Values )
              ALLOCATE( A1 )
 
              DO i=1,ILUn-1
-                CALL Info('CRS_IncompleLU','Recursive round: '//I2S(i))
+                CALL Info('CRS_IncompleLU','Recursive round: '//I2S(i),Level=7)
 
                 A1 % Cols => A % ILUCols
                 A1 % Rows => A % ILURows
@@ -3273,16 +3273,16 @@ SUBROUTINE CRS_RowSumInfo( A, Values )
 
     WRITE(Message,'(a,i1,a,i9)') 'ILU(', ILUn, &
         ') (Real), NOF nonzeros: ',ILURows(n+1)
-    CALL Info( 'CRS_IncompleteLU', Message, Level=5 )
+    CALL Info( 'CRS_IncompleteLU', Message, Level=6 )
 
     WRITE(Message,'(a,i1,a,i9)') 'ILU(', ILUn, &
         ') (Real), filling (%) : ',   &
          FLOOR(ILURows(n+1)*(100.0d0/Rows(n+1)))
-    CALL Info( 'CRS_IncompleteLU', Message, Level=5 )
+    CALL Info( 'CRS_IncompleteLU', Message, Level=6 )
 
     WRITE(Message,'(A,I1,A,F8.2)') 'ILU(',ILUn, &
         ') (Real), Factorization ready at (s): ', CPUTime()-st
-    CALL Info( 'CRS_IncompleteLU', Message, Level=5 )
+    CALL Info( 'CRS_IncompleteLU', Message, Level=6 )
 
     Status = .TRUE.
 !------------------------------------------------------------------------------
@@ -3423,8 +3423,8 @@ SUBROUTINE CRS_RowSumInfo( A, Values )
     COMPLEX(KIND=dp), ALLOCATABLE :: S(:), T(:)
 !------------------------------------------------------------------------------
 
-    WRITE(Message,'(a,i1,a)') 'ILU(',ILUn,') (Complex), Starting Factorization:'
-    CALL Info( 'CRS_ComplexIncompleteLU', Message, Level=5 )
+    WRITE(Message,'(a,i1,a)') 'ILU(',ILUn,') (Complex), Performing Factorization:'
+    CALL Info( 'CRS_ComplexIncompleteLU', Message, Level=6 )
     st = CPUTime()
 
     N = A % NumberOfRows
@@ -3620,16 +3620,16 @@ SUBROUTINE CRS_RowSumInfo( A, Values )
 
     WRITE(Message,'(a,i1,a,i9)') 'ILU(', ILUn, &
         ') (Complex), NOF nonzeros: ',ILURows(n/2+1)
-    CALL Info( 'CRS_ComplexIncompleteLU', Message, Level=5 )
+    CALL Info( 'CRS_ComplexIncompleteLU', Message, Level=6 )
 
     WRITE(Message,'(a,i1,a,i9)') 'ILU(', ILUn, &
         ') (Complex), filling (%) : ',   &
          FLOOR(ILURows(n/2+1)*(400.0d0/Rows(n+1)))
-    CALL Info( 'CRS_ComplexIncompleteLU', Message, Level=5 )
+    CALL Info( 'CRS_ComplexIncompleteLU', Message, Level=6 )
 
     WRITE(Message,'(A,I1,A,F8.2)') 'ILU(',ILUn, &
         ') (Complex), Factorization ready at (s): ', CPUTime()-st
-    CALL Info( 'CRS_ComplexIncompleteLU', Message, Level=5 )
+    CALL Info( 'CRS_ComplexIncompleteLU', Message, Level=6 )
 
     Status = .TRUE.
 !------------------------------------------------------------------------------
@@ -3753,7 +3753,7 @@ SUBROUTINE CRS_RowSumInfo( A, Values )
     REAL(KIND=dp) :: t
 !------------------------------------------------------------------------------
 
-    CALL Info( 'CRS_ILUT', 'Starting factorization:', Level=5 )
+    CALL Info( 'CRS_ILUT', 'Performing factorization:', Level=6 )
     t = CPUTime()
 
     n = A % NumberOfRows
@@ -3767,12 +3767,12 @@ SUBROUTINE CRS_RowSumInfo( A, Values )
     CALL ComputeILUT( A, n, TOL )
 ! 
     WRITE( Message, * ) 'ILU(T) (Real), NOF nonzeros: ',A % ILURows(N+1)
-    CALL Info( 'CRS_ILUT', Message, Level=5 )
+    CALL Info( 'CRS_ILUT', Message, Level=6 )
     WRITE( Message, * ) 'ILU(T) (Real), filling (%): ', &
          FLOOR(A % ILURows(N+1)*(100.0d0/A % Rows(N+1)))
-    CALL Info( 'CRS_ILUT', Message, Level=5 )
+    CALL Info( 'CRS_ILUT', Message, Level=6 )
     WRITE(Message,'(A,F8.2)') 'ILU(T) (Real), Factorization ready at (s): ', CPUTime()-t
-    CALL Info( 'CRS_ILUT', Message, Level=5 )
+    CALL Info( 'CRS_ILUT', Message, Level=6 )
 
     Status = .TRUE.
 !------------------------------------------------------------------------------
@@ -3969,12 +3969,12 @@ SUBROUTINE CRS_RowSumInfo( A, Values )
 !------------------------------------------------------------------------------
     
     WRITE( Message, * ) 'ILU(T) (Complex), NOF nonzeros: ',A % ILURows(n+1)
-    CALL Info( 'CRS_ComplexILUT', Message, Level=5 )
+    CALL Info( 'CRS_ComplexILUT', Message, Level=6 )
     WRITE( Message, * ) 'ILU(T) (Complex), filling (%): ', &
          FLOOR(A % ILURows(n+1)*(400.0d0/A % Rows(2*n+1)))
-    CALL Info( 'CRS_ComplexILUT', Message, Level=5 )
+    CALL Info( 'CRS_ComplexILUT', Message, Level=6 )
     WRITE(Message,'(A,F8.2)') 'ILU(T) (Complex), Factorization ready at (s): ', CPUTime()-t
-    CALL Info( 'CRS_ComplexILUT', Message, Level=5 )
+    CALL Info( 'CRS_ComplexILUT', Message, Level=6 )
 
     Status = .TRUE.
 !------------------------------------------------------------------------------
